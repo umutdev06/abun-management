@@ -1,1241 +1,797 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ankara Bilim Üniversitesi - Ders Yönetim Sistemi</title>
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <style>
-        :root {
-            --primary: #4361ee;
-            --secondary: #3f37c9;
-            --success: #4cc9f0;
-            --danger: #f72585;
-            --warning: #f8961e;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --gray: #6c757d;
-            --abu-blue: #1e3a8a;
-            --abu-gold: #d4af37;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background-color: #f5f7fb;
-            color: var(--dark);
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        header {
-            background: linear-gradient(135deg, var(--abu-blue), var(--secondary));
-            color: white;
-            padding: 1rem 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-        }
-        
-        .university-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--abu-gold);
-        }
-        
-        .auth-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary {
-            background-color: white;
-            color: var(--primary);
-        }
-        
-        .btn-primary:hover {
-            background-color: #f0f0f0;
-        }
-        
-        .btn-secondary {
-            background-color: transparent;
-            color: white;
-            border: 1px solid white;
-        }
-        
-        .btn-secondary:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .btn-success {
-            background-color: var(--success);
-            color: white;
-        }
-        
-        .btn-success:hover {
-            background-color: #3ab0d9;
-        }
-        
-        .btn-danger {
-            background-color: var(--danger);
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background-color: #e11570;
-        }
-        
-        .btn-warning {
-            background-color: var(--warning);
-            color: white;
-        }
-        
-        main {
-            padding: 2rem 0;
-        }
-        
-        .section-title {
-            margin-bottom: 1.5rem;
-            color: var(--abu-blue);
-            font-size: 1.8rem;
-            text-align: center;
-            position: relative;
-        }
-        
-        .section-title:after {
-            content: '';
-            display: block;
-            width: 80px;
-            height: 3px;
-            background: var(--abu-gold);
-            margin: 10px auto;
-        }
-        
-        .courses-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 2rem;
-        }
-        
-        .course-card {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-left: 4px solid var(--abu-blue);
-            position: relative;
-        }
-        
-        .course-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .course-title {
-            font-size: 1.3rem;
-            margin-bottom: 0.5rem;
-            color: var(--abu-blue);
-        }
-        
-        .course-code {
-            display: inline-block;
-            background-color: var(--light);
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            color: var(--gray);
-            margin-bottom: 1rem;
-        }
-        
-        .no-courses {
-            text-align: center;
-            padding: 2rem;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-        
-        .error-message {
-            color: var(--danger);
-            text-align: center;
-            font-weight: 600;
-            margin: 1rem 0;
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal-content {
-            background: white;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 600px;
-            padding: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-        
-        .modal-title {
-            margin-bottom: 1.5rem;
-            color: var(--abu-blue);
-            text-align: center;
-            position: relative;
-        }
-        
-        .modal-title:after {
-            content: '';
-            display: block;
-            width: 60px;
-            height: 2px;
-            background: var(--abu-gold);
-            margin: 10px auto;
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-        
-        .form-control:focus {
-            outline: none;
-            border-color: var(--abu-blue);
-            box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.2);
-        }
-        
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 1.5rem;
-        }
-        
-        .participants-list {
-            max-height: 400px;
-            overflow-y: auto;
-            margin: 1rem 0;
-            border: 1px solid #eee;
-            border-radius: 5px;
-        }
-        
-        .participant-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.2s ease;
-        }
-        
-        .participant-item:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .participant-item:last-child {
-            border-bottom: none;
-        }
-        
-        .admin-panel {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            margin-bottom: 2rem;
-            border-top: 4px solid var(--abu-gold);
-        }
-        
-        .admin-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 1rem;
-        }
-        
-        .admin-courses-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 1.5rem;
-        }
-        
-        .admin-course-card {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            border-left: 4px solid var(--warning);
-            position: relative;
-        }
-        
-        .course-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 1rem;
-            flex-wrap: wrap;
-        }
-        
-        footer {
-            background-color: var(--abu-blue);
-            color: white;
-            text-align: center;
-            padding: 1.5rem 0;
-            margin-top: 2rem;
-        }
-        
-        .success-message {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 12px 15px;
-            border-radius: 5px;
-            margin: 10px 0;
-            text-align: center;
-            border-left: 4px solid #28a745;
-        }
-        
-        .warning-message {
-            background-color: #fff3cd;
-            color: #856404;
-            padding: 12px 15px;
-            border-radius: 5px;
-            margin: 10px 0;
-            text-align: center;
-            border-left: 4px solid #ffc107;
-        }
-        
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid var(--abu-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-        }
-        
-        .confirmation-code-info {
-            background-color: #e7f3ff;
-            border-left: 4px solid var(--abu-blue);
-            padding: 10px 15px;
-            margin: 10px 0;
-            border-radius: 4px;
-            font-size: 0.9rem;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @media (max-width: 768px) {
-            .courses-grid, .admin-courses-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .admin-actions, .course-actions {
-                flex-direction: column;
-            }
-            
-            .modal-content {
-                padding: 1.5rem;
-                max-width: 95%;
-            }
-            
-            .header-content {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .logo-container {
-                flex-direction: column;
-                text-align: center;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ABÜ • Ders Yönetim Sistemi</title>
+  <meta name="description" content="Ankara Bilim Üniversitesi • Ders Yönetim Sistemi – Öğretim üyesi ders oluşturur, öğrenciler onay kodu ile katılır, katılımcılar Excel'e aktarılır." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{
+      --bg: #ffffff;
+      --card: #f8fafc;
+      --muted: #64748b;
+      --text: #1e293b;
+      --primary: #2563eb;
+      --primary-light: #3b82f6;
+      --primary-dark: #1d4ed8;
+      --accent: #f72585;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --abu-blue: #1e3a8a;
+      --abu-gold: #f0c96a;
+      --glass: rgba(241, 245, 249, 0.8);
+      --glass-2: rgba(226, 232, 240, 0.9);
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-hover: 0 10px 25px rgba(0,0,0,0.12);
+      --radius: 12px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji','Segoe UI Emoji', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    header{
+      position: sticky; top:0; z-index: 50; backdrop-filter: blur(12px);
+      background: rgba(255,255,255,0.9);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .container{ max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+    .nav{
+      display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0;
+    }
+
+    .brand{ display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; }
+    .brand-logo{
+      width: 120px;
+      height: 120px;
+      border-radius: 8px;
+      object-fit: contain;
+    }
+    .brand-text{ display:flex; flex-direction:column; }
+    .brand-title{ font-weight:800; letter-spacing:.3px; color: var(--primary-dark); }
+    .brand-sub{ font-size:12px; color: var(--muted) }
+
+    .nav-actions{ display:flex; gap:10px; align-items:center; }
+
+    .btn{
+      --bg: var(--glass);
+      --fg: var(--text);
+      cursor:pointer; border:none; outline:none; color: var(--fg);
+      background: var(--bg); padding: 10px 16px; border-radius: 10px;
+      font-weight:600; letter-spacing:.2px; transition:.2s ease transform, .2s ease background, .2s ease box-shadow;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    .btn:hover{ transform: translateY(-2px); background: var(--glass-2); box-shadow: var(--shadow-hover); }
+    .btn:active{ transform: translateY(0); }
+
+    .btn-primary{ 
+      background: linear-gradient(135deg, var(--primary), var(--primary-light)); 
+      color: white; 
+      border: none; 
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .btn-primary:hover{ 
+      background: linear-gradient(135deg, var(--primary-light), var(--primary-dark)); 
+      filter: brightness(1.05); 
+    }
+
+    .btn-danger{ background: linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; }
+    .btn-success{ background: linear-gradient(135deg, #22c55e, #16a34a); color:white; border:none; }
+    .btn-outline{ background: transparent; border:1px solid rgba(0,0,0,0.15) }
+
+    .hero{
+      position: relative; padding: 50px 0 30px; overflow: hidden;
+      background: transparent;
+      margin-bottom: 30px;
+    }
+    .headline{ 
+      font-size: clamp(26px, 4vw, 40px); 
+      font-weight: 800; 
+      line-height: 1.2; 
+      margin: 20px 0;
+      text-align: center;
+    }
+    .tag{ 
+      display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; 
+      background: rgba(37, 99, 235, 0.1); 
+      border:1px solid rgba(37, 99, 235, 0.2); 
+      color: var(--primary-dark); 
+      font-weight:600; font-size:13px; letter-spacing:.3px;
+      margin: 0 auto;
+      display: table;
+    }
+    .tag svg{ width:16px; height:16px }
+
+    .grid{ display:grid; gap:18px; grid-template-columns: repeat(12, 1fr); }
+
+    .card{
+      background: var(--card); border:1px solid rgba(0,0,0,0.08); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 20px; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+      position: relative; overflow: hidden;
+    }
+    .card:hover{ transform: translateY(-4px); border-color: rgba(0,0,0,0.12); box-shadow: var(--shadow-hover) }
+
+    .section-title{ font-size: 22px; font-weight: 800; margin: 6px 0 14px; letter-spacing:.2px; color: var(--primary-dark); }
+    .muted{ color: var(--muted); font-size:14px }
+
+    /* Courses */
+    #coursesContainer{ display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px }
+    .course-card{ border-left: 4px solid var(--primary); }
+    .course-title{ font-weight:800; font-size:18px; margin-bottom:6px; color: var(--primary-dark); }
+    .course-meta{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 12px }
+    .badge{ 
+      font-size:12px; padding:6px 10px; border-radius:999px; 
+      background: rgba(37, 99, 235, 0.08); 
+      border:1px solid rgba(37, 99, 235, 0.15); 
+      color: var(--primary-dark) 
+    }
+    .badge-classroom {
+      background: rgba(34, 197, 94, 0.08); 
+      border:1px solid rgba(34, 197, 94, 0.15); 
+      color: #16a34a;
+    }
+
+    .empty{
+      text-align:center; padding:26px; border:1px dashed rgba(0,0,0,0.15); color:var(--muted); border-radius:16px;
+    }
+
+    /* Admin panel */
+    #adminPanel{ margin-top:20px }
+    .admin-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap:16px }
+
+    /* Forms */
+    .form-group{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px }
+    label{ font-weight:700; font-size:14px }
+    .input, textarea, select{
+      width:100%; background: white; border:1px solid rgba(0,0,0,0.12); color: var(--text);
+      border-radius: 10px; padding: 12px 14px; outline:none; transition: .2s ease border, .2s ease box-shadow;
+    }
+    .input:focus, textarea:focus, select:focus{ border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) }
+    textarea{ resize: vertical; min-height: 90px }
+
+    /* Modal */
+    .modal{ position:fixed; inset:0; display:none; place-items:center; padding:20px; z-index:1000; }
+    .modal.open{ display:grid; animation: fadeIn .2s ease }
+    .modal::before{ content:""; position:absolute; inset:0; background: rgba(0,0,0,.4); backdrop-filter: blur(6px); }
+    .modal-content{ 
+      position:relative; width:min(620px, 96vw); 
+      background: white; 
+      border:1px solid rgba(0,0,0,0.1); 
+      border-radius: 16px; 
+      padding: 24px; 
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15); 
+      transform-origin: 50% 40%; 
+      animation: pop .2s ease 
+    }
+    @keyframes fadeIn{ from{ opacity:0 } to{ opacity:1 } }
+    @keyframes pop{ from{ transform: scale(.96); opacity:.6 } to{ transform: scale(1); opacity:1 } }
+    .modal-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px }
+    .modal-title{ font-size:20px; font-weight:800; color: var(--primary-dark) }
+
+    /* Toast */
+    .toast{ position: fixed; right:16px; bottom:16px; display:grid; gap:10px; z-index:1100 }
+    .toast-item{ 
+      background: rgba(13,201,175,.12); 
+      color:#0f766e; 
+      border:1px solid rgba(13,201,175,.35); 
+      padding:12px 14px; 
+      border-radius:10px; 
+      box-shadow: var(--shadow); 
+      animation: slideIn .25s ease 
+    }
+    @keyframes slideIn{ from{ transform: translateY(8px); opacity:0 } to{ transform: translateY(0); opacity:1 } }
+
+    /* Footer */
+    footer{ 
+      opacity:.85; 
+      border-top:1px solid rgba(0,0,0,0.08); 
+      margin-top: 40px; 
+      background: #f8fafc;
+    }
+    .footer-inner{ padding:18px 0; display:flex; justify-content:center; font-size:13px; color:var(--muted) }
+
+    /* Responsive */
+    @media (max-width:780px){
+      .nav{ flex-wrap: wrap }
+      .brand-sub{ display:none }
+      .hero { padding: 30px 0 20px; }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <div class="logo-container">
-                    <div class="logo">Ders Yönetim Sistemi</div>
-                    <div class="university-name">Ankara Bilim Üniversitesi</div>
-                </div>
-                <div class="auth-buttons">
-                    <button class="btn btn-secondary" id="loginBtn">Öğretim Üyesi Girişi</button>
-                </div>
-            </div>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="#" aria-label="Ankara Bilim Üniversitesi Ders Yönetim Sistemi">
+        <img src="logo.png" alt="Ankara Bilim Üniversitesi" class="brand-logo">
+        <div class="brand-text">
+          <div class="brand-title">Ders Yönetim Sistemi</div>
+          <div class="brand-sub">Ankara Bilim Üniversitesi</div>
         </div>
-    </header>
-    
-    <main>
-        <div class="container">
-            <h1 class="section-title">Aktif Dersler</h1>
-            
-            <div id="coursesContainer">
-                <!-- Dersler burada listelenecek -->
-            </div>
-            
-            <div id="noCoursesMessage" class="no-courses">
-                <h2>Aktif Ders Bulunmamaktadır</h2>
-                <p>Şu anda aktif bir ders bulunmuyor. Öğretim üyesi girişi yaparak ders oluşturabilirsiniz.</p>
-            </div>
-            
-            <div id="adminPanel" class="admin-panel" style="display: none;">
-                <h2>Öğretim Üyesi Paneli</h2>
-                <p>Hoş geldiniz, <strong>Dr. Cem Harun Meydan</strong>. Ders oluşturabilir, düzenleyebilir, silebilir, katılımcıları görüntüleyebilir ve Excel formatında indirebilirsiniz.</p>
-                
-                <div class="admin-actions">
-                    <button class="btn btn-primary" id="createCourseBtn">Yeni Ders Oluştur</button>
-                    <button class="btn btn-danger" id="clearAllDataBtn">Tüm Verileri Temizle</button>
-                </div>
-                
-                <h3 style="margin-top: 1.5rem;">Oluşturduğunuz Dersler</h3>
-                <div id="adminCoursesList" class="admin-courses-grid">
-                    <!-- Öğretim üyesinin dersleri burada listelenecek -->
-                </div>
-            </div>
-        </div>
-    </main>
-    
-    <!-- Giriş Modalı -->
-    <div class="modal" id="loginModal">
-        <div class="modal-content">
-            <h2 class="modal-title">Öğretim Üyesi Girişi</h2>
-            <div class="form-group">
-                <label class="form-label" for="username">Kullanıcı Adı</label>
-                <input type="text" class="form-control" id="username" placeholder="Kullanıcı adınızı girin">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="password">Şifre</label>
-                <input type="password" class="form-control" id="password" placeholder="Şifrenizi girin">
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelLoginBtn">İptal</button>
-                <button class="btn btn-primary" id="confirmLoginBtn">Giriş Yap</button>
-            </div>
-        </div>
+      </a>
+      <div class="nav-actions">
+        <button class="btn btn-primary" id="loginBtn">Öğretim Üyesi Girişi</button>
+      </div>
     </div>
-    
-    <!-- Ders Oluşturma Modalı -->
-    <div class="modal" id="createCourseModal">
-        <div class="modal-content">
-            <h2 class="modal-title">Yeni Ders Oluştur</h2>
-            <div class="form-group">
-                <label class="form-label" for="courseName">Ders Adı</label>
-                <input type="text" class="form-control" id="courseName" placeholder="Ders adını girin">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="courseDescription">Ders Açıklaması</label>
-                <textarea class="form-control" id="courseDescription" rows="3" placeholder="Ders açıklamasını girin"></textarea>
-            </div>
-            <div class="confirmation-code-info">
-                <strong>Not:</strong> Ders oluşturulduğunda sistem otomatik olarak 5 haneli bir onay kodu oluşturacak. Bu kodu öğrencilerle paylaşarak derse katılmalarını sağlayabilirsiniz.
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelCreateCourseBtn">İptal</button>
-                <button class="btn btn-primary" id="confirmCreateCourseBtn">Oluştur</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Ders Silme Onay Modalı -->
-    <div class="modal" id="deleteCourseModal">
-        <div class="modal-content">
-            <h2 class="modal-title">Dersi Sil</h2>
-            <div class="warning-message">
-                <strong>Uyarı:</strong> Bu işlem geri alınamaz! Dersi silmek, tüm katılımcı verilerini de kalıcı olarak silecektir.
-            </div>
-            <p id="deleteCourseMessage">Bu dersi silmek istediğinizden emin misiniz?</p>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelDeleteCourseBtn">İptal</button>
-                <button class="btn btn-danger" id="confirmDeleteCourseBtn">Dersi Sil</button>
-            </div>
-        </div>
-    </div>
+  </header>
 
-    <!-- Tüm Verileri Temizle Modalı -->
-    <div class="modal" id="clearAllDataModal">
-        <div class="modal-content">
-            <h2 class="modal-title">Tüm Verileri Temizle</h2>
-            <div class="warning-message">
-                <strong>ÇOK ÖNEMLİ UYARI:</strong> Bu işlem geri alınamaz! Tüm dersler ve katılımcı verileri kalıcı olarak silinecektir.
-            </div>
-            <p>Bu işlem tüm veritabanını sıfırlayacak ve tüm dersleri silecektir. Devam etmek istediğinizden emin misiniz?</p>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelClearAllDataBtn">İptal</button>
-                <button class="btn btn-danger" id="confirmClearAllDataBtn">Tümünü Sil</button>
-            </div>
-        </div>
+  <main class="container">
+    <section class="hero">
+      <div class="tag"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l2.4 4.86 5.37.78-3.88 3.78.92 5.36L12 15.9 7.19 17.78l.92-5.36L4.23 8.64l5.37-.78L12 3z" stroke="currentColor" stroke-width="1.4"/></svg> Yoklama & Katılım • Ankara Bilim Üniversitesi</div>
+      <h1 class="headline">Dersi oluştur, öğrencileri katılmaya davet et, <span style="background:linear-gradient(135deg,var(--primary),var(--primary-light)); -webkit-background-clip:text; background-clip:text; color:transparent">Excel'e tek tıkla aktar</span>.</h1>
+    </section>
+
+    <section class="card" aria-labelledby="aktif-dersler">
+      <div class="section-title" id="aktif-dersler">Aktif Dersler</div>
+      <p class="muted" style="margin-bottom:12px">Aşağıdan katılmak istediğiniz dersi seçin, bilgilerinizi girin ve derse kayıt olun!</p>
+      <div id="coursesContainer"></div>
+      <div id="noCoursesMessage" class="empty" style="display:none">Şu anda katılabileceğin aktif bir ders bulunmuyor.</div>
+    </section>
+
+    <section id="adminPanel" class="card" style="display:none" aria-live="polite">
+      <div class="section-title">Öğretim Üyesi Paneli</div>
+      <p class="muted">Hoş geldiniz, <strong id="instructorName">-</strong>. Ders oluşturabilir, katılımcıları görüntüleyebilir ve Excel olarak indirebilirsiniz.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
+        <button class="btn btn-primary" id="createCourseBtn">Yeni Ders Oluştur</button>
+        <button class="btn btn-danger" id="clearAllDataBtn">Tüm Verileri Temizle</button>
+      </div>
+
+      <div style="margin-top:16px; display:flex; align-items:center; gap:10px">
+        <input id="adminSearch" class="input" placeholder="Derslerde ara (ad, açıklama, sınıf)" />
+        <button class="btn" id="adminSearchClear">Temizle</button>
+      </div>
+
+      <div id="adminCoursesList" class="admin-grid" style="margin-top:14px"></div>
+    </section>
+  </main>
+
+  <!-- Login Modal -->
+  <div class="modal" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="loginTitle">Öğretim Üyesi Girişi</div>
+        <button class="btn" id="cancelLoginBtn" aria-label="Kapat">✕</button>
+      </div>
+      <div class="form-group">
+        <label for="username">Kullanıcı Adı</label>
+        <input id="username" class="input" placeholder="Kullanıcı Adı" />
+      </div>
+      <div class="form-group">
+        <label for="password">Şifre</label>
+        <input id="password" type="password" class="input" placeholder="Şifre" />
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button class="btn" id="confirmLoginBtn">Giriş Yap</button>
+      </div>
     </div>
-    
-    <!-- Derse Katılma Modalı -->
-    <div class="modal" id="joinCourseModal">
-        <div class="modal-content">
-            <h2 class="modal-title">Derse Katıl</h2>
-            <div class="form-group">
-                <label class="form-label" for="studentNumber">Öğrenci Numarası</label>
-                <input type="text" class="form-control" id="studentNumber" placeholder="Öğrenci numaranızı girin">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="studentName">Adınız</label>
-                <input type="text" class="form-control" id="studentName" placeholder="Adınızı girin">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="studentSurname">Soyadınız</label>
-                <input type="text" class="form-control" id="studentSurname" placeholder="Soyadınızı girin">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="confirmationCode">Onay Kodu</label>
-                <input type="text" class="form-control" id="confirmationCode" placeholder="5 haneli onay kodunu girin">
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelJoinCourseBtn">İptal</button>
-                <button class="btn btn-primary" id="confirmJoinCourseBtn">Katıl</button>
-            </div>
-        </div>
+  </div>
+
+  <!-- Create Course Modal -->
+  <div class="modal" id="createCourseModal" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="createTitle">Yeni Ders Oluştur</div>
+        <button class="btn" id="cancelCreateCourseBtn" aria-label="Kapat">✕</button>
+      </div>
+      <div class="form-group">
+        <label for="courseName">Ders Adı</label>
+        <input id="courseName" class="input" placeholder="Örn: Bilgi Sistemleri 101" />
+      </div>
+      <div class="form-group">
+        <label for="courseDescription">Ders Açıklaması</label>
+        <textarea id="courseDescription" placeholder="Örn: Giriş düzeyi bilgi sistemleri dersi"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="courseClassroom">Sınıf</label>
+        <select id="courseClassroom" class="input">
+          <option value="">Sınıf seçiniz</option>
+          <option value="AMFI 1">AMFI 1</option>
+          <option value="AMFI 2">AMFI 2</option>
+          <option value="AMFI 3">AMFI 3</option>
+          <option value="AMFI 4">AMFI 4</option>
+          <option value="LH 1">LH 1</option>
+          <option value="LH 2">LH 2</option>
+          <option value="LH 3">LH 3</option>
+          <option value="LH 4">LH 4</option>
+          <option value="LH 5">LH 5</option>
+          <option value="LH 6">LH 6</option>
+          <option value="LH 7">LH 7</option>
+          <option value="C-100">C-100</option>
+          <option value="C-101">C-101</option>
+          <option value="C-102">C-102</option>
+          <option value="C-103">C-103</option>
+          <option value="Konferans Salonu">Konferans Salonu</option>
+          <option value="Laboratuvar-1">Laboratuvar-1</option>
+          <option value="Laboratuvar-2">Laboratuvar-2</option>
+          <option value="Uzaktan Eğitim">Uzaktan Eğitim</option>
+        </select>
+      </div>
+      <div class="muted" style="background:rgba(37, 99, 235, 0.08); border:1px solid rgba(37, 99, 235, 0.2); padding:12px 14px; border-radius:10px">Ders oluşturulduğunda sistem otomatik <strong>5 haneli onay kodu</strong> üretir. Bu kodu öğrencilerle paylaşın.</div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px">
+        <button class="btn btn-primary" id="confirmCreateCourseBtn">Oluştur</button>
+      </div>
     </div>
-    
-    <!-- Katılımcıları Görüntüleme Modalı -->
-    <div class="modal" id="viewParticipantsModal">
-        <div class="modal-content" style="max-width: 800px;">
-            <h2 class="modal-title" id="participantsCourseTitle">Katılımcılar</h2>
-            <div class="participants-list" id="participantsList">
-                <!-- Katılımcılar burada listelenecek -->
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="closeParticipantsBtn">Kapat</button>
-                <button class="btn btn-success" id="exportParticipantsBtn">Excel'e Aktar</button>
-            </div>
-        </div>
+  </div>
+
+  <!-- Delete Course Modal -->
+  <div class="modal" id="deleteCourseModal" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="deleteTitle">Dersi Sil</div>
+        <button class="btn" id="cancelDeleteCourseBtn" aria-label="Kapat">✕</button>
+      </div>
+      <div class="muted" style="background: rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2); padding:12px 14px; border-radius:10px; margin-bottom:10px"><strong>Uyarı:</strong> Bu işlem geri alınamaz. Dersi ve tüm katılımcıları sileceksiniz.</div>
+      <p id="deleteCourseMessage" style="margin: 0 0 10px"></p>
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button class="btn btn-danger" id="confirmDeleteCourseBtn">Dersi Sil</button>
+      </div>
     </div>
-    
-    <footer>
-        <div class="container">
-            <p>© 2025 Ankara Bilim Üniversitesi - Tüm Hakları Saklıdır</p>
-        </div>
-    </footer>
-    
-    <script>
-        // IndexedDB veritabanı işlemleri
-        const DB_NAME = 'DersYonetimDB';
-        const DB_VERSION = 1;
-        const COURSES_STORE = 'courses';
-        const PARTICIPANTS_STORE = 'participants';
-        
-        let db = null;
-        let courses = [];
-        let currentUser = null;
-        let selectedCourseId = null;
-        let courseToDeleteId = null;
-        
-        // DOM elementleri
-        const coursesContainer = document.getElementById('coursesContainer');
-        const noCoursesMessage = document.getElementById('noCoursesMessage');
-        const adminPanel = document.getElementById('adminPanel');
-        const adminCoursesList = document.getElementById('adminCoursesList');
-        
-        // Modal elementleri
-        const loginModal = document.getElementById('loginModal');
-        const createCourseModal = document.getElementById('createCourseModal');
-        const deleteCourseModal = document.getElementById('deleteCourseModal');
-        const clearAllDataModal = document.getElementById('clearAllDataModal');
-        const joinCourseModal = document.getElementById('joinCourseModal');
-        const viewParticipantsModal = document.getElementById('viewParticipantsModal');
-        
-        // Butonlar
-        const loginBtn = document.getElementById('loginBtn');
-        const cancelLoginBtn = document.getElementById('cancelLoginBtn');
-        const confirmLoginBtn = document.getElementById('confirmLoginBtn');
-        const createCourseBtn = document.getElementById('createCourseBtn');
-        const cancelCreateCourseBtn = document.getElementById('cancelCreateCourseBtn');
-        const confirmCreateCourseBtn = document.getElementById('confirmCreateCourseBtn');
-        const cancelDeleteCourseBtn = document.getElementById('cancelDeleteCourseBtn');
-        const confirmDeleteCourseBtn = document.getElementById('confirmDeleteCourseBtn');
-        const clearAllDataBtn = document.getElementById('clearAllDataBtn');
-        const cancelClearAllDataBtn = document.getElementById('cancelClearAllDataBtn');
-        const confirmClearAllDataBtn = document.getElementById('confirmClearAllDataBtn');
-        const cancelJoinCourseBtn = document.getElementById('cancelJoinCourseBtn');
-        const confirmJoinCourseBtn = document.getElementById('confirmJoinCourseBtn');
-        const closeParticipantsBtn = document.getElementById('closeParticipantsBtn');
-        const exportParticipantsBtn = document.getElementById('exportParticipantsBtn');
-        
-        // İlk yükleme
-        document.addEventListener('DOMContentLoaded', function() {
-            initDatabase();
-            
-            // Event listener'lar
-            loginBtn.addEventListener('click', openLoginModal);
-            cancelLoginBtn.addEventListener('click', closeLoginModal);
-            confirmLoginBtn.addEventListener('click', handleLogin);
-            
-            createCourseBtn.addEventListener('click', openCreateCourseModal);
-            cancelCreateCourseBtn.addEventListener('click', closeCreateCourseModal);
-            confirmCreateCourseBtn.addEventListener('click', handleCreateCourse);
-            
-            cancelDeleteCourseBtn.addEventListener('click', closeDeleteCourseModal);
-            confirmDeleteCourseBtn.addEventListener('click', handleDeleteCourse);
-            
-            clearAllDataBtn.addEventListener('click', openClearAllDataModal);
-            cancelClearAllDataBtn.addEventListener('click', closeClearAllDataModal);
-            confirmClearAllDataBtn.addEventListener('click', handleClearAllData);
-            
-            cancelJoinCourseBtn.addEventListener('click', closeJoinCourseModal);
-            confirmJoinCourseBtn.addEventListener('click', handleJoinCourse);
-            
-            closeParticipantsBtn.addEventListener('click', closeViewParticipantsModal);
-            exportParticipantsBtn.addEventListener('click', handleExportParticipants);
-        });
-        
-        // IndexedDB başlatma
-        function initDatabase() {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-            
-            request.onerror = function(event) {
-                console.error("Veritabanı hatası:", event.target.error);
-                showErrorMessage('Veritabanı bağlantı hatası!');
-            };
-            
-            request.onsuccess = function(event) {
-                db = event.target.result;
-                console.log("Veritabanı başarıyla açıldı");
-                loadCoursesFromDB();
-            };
-            
-            request.onupgradeneeded = function(event) {
-                const database = event.target.result;
-                
-                // Dersler için object store oluştur
-                if (!database.objectStoreNames.contains(COURSES_STORE)) {
-                    const coursesStore = database.createObjectStore(COURSES_STORE, { 
-                        keyPath: 'id', 
-                        autoIncrement: true 
-                    });
-                    coursesStore.createIndex('instructor', 'instructor', { unique: false });
-                }
-                
-                // Katılımcılar için object store oluştur
-                if (!database.objectStoreNames.contains(PARTICIPANTS_STORE)) {
-                    const participantsStore = database.createObjectStore(PARTICIPANTS_STORE, { 
-                        keyPath: 'id', 
-                        autoIncrement: true 
-                    });
-                    participantsStore.createIndex('courseId', 'courseId', { unique: false });
-                    participantsStore.createIndex('studentNumber', 'studentNumber', { unique: false });
-                }
-            };
+  </div>
+
+  <!-- Clear All Data Modal -->
+  <div class="modal" id="clearAllDataModal" role="dialog" aria-modal="true" aria-labelledby="clearAllTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="clearAllTitle">Tüm Verileri Temizle</div>
+        <button class="btn" id="cancelClearAllDataBtn" aria-label="Kapat">✕</button>
+      </div>
+      <div class="muted" style="background: rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.2); padding:12px 14px; border-radius:10px; margin-bottom:10px"><strong>Çok Önemli:</strong> Bu işlem tüm dersleri ve katılımcıları kalıcı olarak siler.</div>
+      <p>Tüm veritabanını sıfırlamak istediğinizden emin misiniz?</p>
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button class="btn btn-danger" id="confirmClearAllDataBtn">Tümünü Sil</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Join Course Modal -->
+  <div class="modal" id="joinCourseModal" role="dialog" aria-modal="true" aria-labelledby="joinTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="joinTitle">Derse Katıl</div>
+        <button class="btn" id="cancelJoinCourseBtn" aria-label="Kapat">✕</button>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr; gap:10px">
+        <div class="form-group"><label for="studentNumber">Öğrenci No</label><input id="studentNumber" class="input" placeholder="Örn: 250307018"></div>
+        <div class="form-group"><label for="confirmationCode">Onay Kodu</label><input id="confirmationCode" class="input" placeholder="5 haneli kod"></div>
+        <div class="form-group" style="grid-column: span 1"><label for="studentName">Ad</label><input id="studentName" class="input" placeholder="Adınız"></div>
+        <div class="form-group" style="grid-column: span 1"><label for="studentSurname">Soyad</label><input id="studentSurname" class="input" placeholder="Soyadınız"></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button class="btn btn-primary" id="confirmJoinCourseBtn">Katıl</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Participants Modal -->
+  <div class="modal" id="viewParticipantsModal" role="dialog" aria-modal="true" aria-labelledby="participantsTitle">
+    <div class="modal-content" style="width:min(860px, 96vw)">
+      <div class="modal-header">
+        <div class="modal-title" id="participantsTitle">Katılımcılar</div>
+        <button class="btn" id="closeParticipantsBtn" aria-label="Kapat">✕</button>
+      </div>
+      <div id="participantsList" class="card" style="background:transparent; box-shadow:none; padding:0; border:none">
+        <!-- List -->
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px">
+        <button class="btn btn-success" id="exportParticipantsBtn">Excel'e Aktar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <footer>
+    <div class="container footer-inner">© 2025 Ankara Bilim Üniversitesi — developed by Umut Can Kandemir</div>
+  </footer>
+
+  <script>
+    // ------------------ Constants & State ------------------
+    const DB_NAME = 'DersYonetimDB';
+    const DB_VERSION = 1;
+    const COURSES_STORE = 'courses';
+    const PARTICIPANTS_STORE = 'participants';
+
+    // Yeni admin hesapları ve şifreleri
+    const ADMIN_ACCOUNTS = {
+      'admin': { password: '12345', name: 'Prof. Dr. Cem Harun Meydan' },
+      'admin1': { password: '73928', name: 'Prof. Dr. Neslihan Künye Polat' },
+      'admin2': { password: '48516', name: 'Prof. Dr. Mehmet Alper Akdemir' },
+      'admin3': { password: '62047', name: 'Prof. Dr. Güney Gürsel' },
+      'admin4': { password: '19375', name: 'Prof. Dr. Adil Akkuş' }
+    };
+
+    let db = null;
+    let courses = [];
+    let currentUser = null;
+    let selectedCourseId = null;
+    let courseToDeleteId = null;
+
+    // ------------------ Elements ------------------
+    const coursesContainer = document.getElementById('coursesContainer');
+    const noCoursesMessage = document.getElementById('noCoursesMessage');
+    const adminPanel = document.getElementById('adminPanel');
+    const adminCoursesList = document.getElementById('adminCoursesList');
+    const instructorNameEl = document.getElementById('instructorName');
+    const adminSearch = document.getElementById('adminSearch');
+    const adminSearchClear = document.getElementById('adminSearchClear');
+    const toastRoot = document.getElementById('toast');
+
+    // Modals
+    const loginModal = document.getElementById('loginModal');
+    const createCourseModal = document.getElementById('createCourseModal');
+    const deleteCourseModal = document.getElementById('deleteCourseModal');
+    const clearAllDataModal = document.getElementById('clearAllDataModal');
+    const joinCourseModal = document.getElementById('joinCourseModal');
+    const viewParticipantsModal = document.getElementById('viewParticipantsModal');
+
+    // Buttons
+    const loginBtn = document.getElementById('loginBtn');
+    const cancelLoginBtn = document.getElementById('cancelLoginBtn');
+    const confirmLoginBtn = document.getElementById('confirmLoginBtn');
+    const createCourseBtn = document.getElementById('createCourseBtn');
+    const cancelCreateCourseBtn = document.getElementById('cancelCreateCourseBtn');
+    const confirmCreateCourseBtn = document.getElementById('confirmCreateCourseBtn');
+    const cancelDeleteCourseBtn = document.getElementById('cancelDeleteCourseBtn');
+    const confirmDeleteCourseBtn = document.getElementById('confirmDeleteCourseBtn');
+    const clearAllDataBtn = document.getElementById('clearAllDataBtn');
+    const cancelClearAllDataBtn = document.getElementById('cancelClearAllDataBtn');
+    const confirmClearAllDataBtn = document.getElementById('confirmClearAllDataBtn');
+    const cancelJoinCourseBtn = document.getElementById('cancelJoinCourseBtn');
+    const confirmJoinCourseBtn = document.getElementById('confirmJoinCourseBtn');
+    const closeParticipantsBtn = document.getElementById('closeParticipantsBtn');
+    const exportParticipantsBtn = document.getElementById('exportParticipantsBtn');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initDatabase();
+      // Listeners
+      loginBtn.addEventListener('click', () => openModal(loginModal));
+      cancelLoginBtn.addEventListener('click', () => closeModal(loginModal));
+      confirmLoginBtn.addEventListener('click', handleLogin);
+
+      createCourseBtn?.addEventListener('click', () => openModal(createCourseModal));
+      cancelCreateCourseBtn?.addEventListener('click', () => closeModal(createCourseModal));
+      confirmCreateCourseBtn?.addEventListener('click', handleCreateCourse);
+
+      cancelDeleteCourseBtn?.addEventListener('click', () => closeModal(deleteCourseModal));
+      confirmDeleteCourseBtn?.addEventListener('click', handleDeleteCourse);
+
+      clearAllDataBtn?.addEventListener('click', () => openModal(clearAllDataModal));
+      cancelClearAllDataBtn?.addEventListener('click', () => closeModal(clearAllDataModal));
+      confirmClearAllDataBtn?.addEventListener('click', handleClearAllData);
+
+      cancelJoinCourseBtn?.addEventListener('click', () => closeModal(joinCourseModal));
+      confirmJoinCourseBtn?.addEventListener('click', handleJoinCourse);
+
+      closeParticipantsBtn?.addEventListener('click', () => closeModal(viewParticipantsModal));
+      exportParticipantsBtn?.addEventListener('click', handleExportParticipants);
+
+      adminSearch.addEventListener('input', renderAdminCourses);
+      adminSearchClear.addEventListener('click', () => { adminSearch.value = ''; renderAdminCourses(); });
+
+      // Close modal on backdrop
+      document.querySelectorAll('.modal').forEach(m => {
+        m.addEventListener('click', (e) => { if (e.target === m) closeModal(m); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(m); });
+      })
+    });
+
+    // ------------------ IndexedDB ------------------
+    function initDatabase(){
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onerror = (e) => { notify('Veritabanı bağlantı hatası!', 'error'); };
+      request.onsuccess = (e) => { db = e.target.result; loadCoursesFromDB(); };
+      request.onupgradeneeded = (e) => {
+        const database = e.target.result;
+        if(!database.objectStoreNames.contains(COURSES_STORE)){
+          const cs = database.createObjectStore(COURSES_STORE, { keyPath:'id', autoIncrement:true });
+          cs.createIndex('instructor', 'instructor', { unique:false });
         }
-        
-        // Dersleri veritabanından yükle
-        function loadCoursesFromDB() {
-            if (!db) {
-                console.error("Veritabanı bağlantısı yok");
-                return;
-            }
-            
-            const transaction = db.transaction([COURSES_STORE], 'readonly');
-            const store = transaction.objectStore(COURSES_STORE);
-            const request = store.getAll();
-            
-            request.onsuccess = function(event) {
-                courses = event.target.result || [];
-                console.log("Dersler yüklendi:", courses);
-                
-                // Her ders için katılımcıları yükle
-                courses.forEach(course => {
-                    loadParticipantsForCourse(course.id);
-                });
-                
-                renderCourses();
-            };
-            
-            request.onerror = function(event) {
-                console.error("Dersler yüklenirken hata:", event.target.error);
-            };
+        if(!database.objectStoreNames.contains(PARTICIPANTS_STORE)){
+          const ps = database.createObjectStore(PARTICIPANTS_STORE, { keyPath:'id', autoIncrement:true });
+          ps.createIndex('courseId', 'courseId', { unique:false });
+          ps.createIndex('studentNumber', 'studentNumber', { unique:false });
         }
-        
-        // Belirli bir dersin katılımcılarını yükle
-        function loadParticipantsForCourse(courseId) {
-            if (!db) return;
-            
-            const transaction = db.transaction([PARTICIPANTS_STORE], 'readonly');
-            const store = transaction.objectStore(PARTICIPANTS_STORE);
-            const index = store.index('courseId');
-            const request = index.getAll(courseId);
-            
-            request.onsuccess = function(event) {
-                const participants = event.target.result || [];
-                const course = courses.find(c => c.id === courseId);
-                if (course) {
-                    course.participants = participants;
-                }
-            };
-        }
-        
-        // Dersleri render etme
-        function renderCourses() {
-            coursesContainer.innerHTML = '';
-            
-            if (courses.length === 0) {
-                noCoursesMessage.style.display = 'block';
-                return;
-            }
-            
-            noCoursesMessage.style.display = 'none';
-            
-            courses.forEach(course => {
-                const courseCard = document.createElement('div');
-                courseCard.className = 'course-card';
-                
-                // Öğrenciler için onay kodu gösterilmiyor
-                let courseCodeHtml = '';
-                if (currentUser && course.instructor === currentUser.name) {
-                    courseCodeHtml = `<span class="course-code">Onay Kodu: ${course.code}</span>`;
-                }
-                
-                courseCard.innerHTML = `
-                    <h3 class="course-title">${course.name}</h3>
-                    ${courseCodeHtml}
-                    <p>${course.description}</p>
-                    <p><strong>Eğitmen:</strong> ${course.instructor}</p>
-                    <p><strong>Katılımcı Sayısı:</strong> ${course.participants ? course.participants.length : 0}</p>
-                    <button class="btn btn-primary join-course-btn" data-id="${course.id}">Derse Katıl</button>
-                `;
-                
-                coursesContainer.appendChild(courseCard);
-            });
-            
-            // Derse katıl butonlarına event listener ekleme
-            document.querySelectorAll('.join-course-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    selectedCourseId = parseInt(this.getAttribute('data-id'));
-                    openJoinCourseModal();
-                });
-            });
-            
-            // Eğer admin girişi yapıldıysa admin kurslarını da render et
-            if (currentUser) {
-                renderAdminCourses();
-            }
-        }
-        
-        // Admin derslerini render etme
-        function renderAdminCourses() {
-            adminCoursesList.innerHTML = '';
-            
-            const adminCourses = courses.filter(course => course.instructor === currentUser.name);
-            
-            if (adminCourses.length === 0) {
-                adminCoursesList.innerHTML = '<p>Henüz bir ders oluşturmadınız.</p>';
-                return;
-            }
-            
-            adminCourses.forEach(course => {
-                const courseItem = document.createElement('div');
-                courseItem.className = 'admin-course-card';
-                
-                courseItem.innerHTML = `
-                    <h3 class="course-title">${course.name}</h3>
-                    <span class="course-code">Onay Kodu: ${course.code}</span>
-                    <p>${course.description}</p>
-                    <p><strong>Katılımcı Sayısı:</strong> ${course.participants ? course.participants.length : 0}</p>
-                    <div class="course-actions">
-                        <button class="btn btn-primary view-participants-btn" data-id="${course.id}">Katılımcıları Gör</button>
-                        <button class="btn btn-success export-course-btn" data-id="${course.id}">Excel İndir</button>
-                        <button class="btn btn-danger delete-course-btn" data-id="${course.id}" data-name="${course.name}">Dersi Sil</button>
-                    </div>
-                `;
-                
-                adminCoursesList.appendChild(courseItem);
-            });
-            
-            // Katılımcıları gör butonlarına event listener ekleme
-            document.querySelectorAll('.view-participants-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    selectedCourseId = parseInt(this.getAttribute('data-id'));
-                    openViewParticipantsModal();
-                });
-            });
-            
-            // Excel indir butonlarına event listener ekleme
-            document.querySelectorAll('.export-course-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    selectedCourseId = parseInt(this.getAttribute('data-id'));
-                    handleExportParticipants();
-                });
-            });
-            
-            // Ders sil butonlarına event listener ekleme
-            document.querySelectorAll('.delete-course-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    courseToDeleteId = parseInt(this.getAttribute('data-id'));
-                    const courseName = this.getAttribute('data-name');
-                    openDeleteCourseModal(courseName);
-                });
-            });
-        }
-        
-        // Modal işlemleri
-        function openLoginModal() {
-            loginModal.style.display = 'flex';
-        }
-        
-        function closeLoginModal() {
-            loginModal.style.display = 'none';
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-        }
-        
-        function openCreateCourseModal() {
-            createCourseModal.style.display = 'flex';
-        }
-        
-        function closeCreateCourseModal() {
-            createCourseModal.style.display = 'none';
-            document.getElementById('courseName').value = '';
-            document.getElementById('courseDescription').value = '';
-        }
-        
-        function openDeleteCourseModal(courseName) {
-            document.getElementById('deleteCourseMessage').textContent = 
-                `"${courseName}" dersini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm katılımcı verileri de silinecektir.`;
-            deleteCourseModal.style.display = 'flex';
-        }
-        
-        function closeDeleteCourseModal() {
-            deleteCourseModal.style.display = 'none';
-            courseToDeleteId = null;
-        }
-        
-        function openClearAllDataModal() {
-            clearAllDataModal.style.display = 'flex';
-        }
-        
-        function closeClearAllDataModal() {
-            clearAllDataModal.style.display = 'none';
-        }
-        
-        function openJoinCourseModal() {
-            joinCourseModal.style.display = 'flex';
-        }
-        
-        function closeJoinCourseModal() {
-            joinCourseModal.style.display = 'none';
-            document.getElementById('studentNumber').value = '';
-            document.getElementById('studentName').value = '';
-            document.getElementById('studentSurname').value = '';
-            document.getElementById('confirmationCode').value = '';
-        }
-        
-        function openViewParticipantsModal() {
-            const course = courses.find(c => c.id === selectedCourseId);
-            document.getElementById('participantsCourseTitle').textContent = `${course.name} - Katılımcılar`;
-            
-            const participantsList = document.getElementById('participantsList');
-            participantsList.innerHTML = '';
-            
-            if (!course.participants || course.participants.length === 0) {
-                participantsList.innerHTML = '<p style="padding: 20px; text-align: center;">Bu derse henüz katılımcı yok.</p>';
-            } else {
-                // Tablo başlıkları
-                const headerItem = document.createElement('div');
-                headerItem.className = 'participant-item';
-                headerItem.style.fontWeight = 'bold';
-                headerItem.style.backgroundColor = '#f8f9fa';
-                headerItem.innerHTML = `
-                    <div style="flex: 1;"><strong>Öğrenci No</strong></div>
-                    <div style="flex: 1;"><strong>Ad</strong></div>
-                    <div style="flex: 1;"><strong>Soyad</strong></div>
-                    <div style="flex: 1;"><strong>Katılma Tarihi</strong></div>
-                `;
-                participantsList.appendChild(headerItem);
-                
-                course.participants.forEach(participant => {
-                    const participantItem = document.createElement('div');
-                    participantItem.className = 'participant-item';
-                    participantItem.innerHTML = `
-                        <div style="flex: 1;">${participant.studentNumber}</div>
-                        <div style="flex: 1;">${participant.studentName}</div>
-                        <div style="flex: 1;">${participant.studentSurname}</div>
-                        <div style="flex: 1;">${new Date(participant.joinDate).toLocaleDateString('tr-TR')}</div>
-                    `;
-                    participantsList.appendChild(participantItem);
-                });
-            }
-            
-            viewParticipantsModal.style.display = 'flex';
-        }
-        
-        function closeViewParticipantsModal() {
-            viewParticipantsModal.style.display = 'none';
-        }
-        
-        // İşlevler
-        function handleLogin() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            if (username === 'admin' && password === '12345') {
-                currentUser = {
-                    name: 'Dr. Cem Harun Meydan',
-                    username: 'admin'
-                };
-                
-                adminPanel.style.display = 'block';
-                loginBtn.textContent = 'Çıkış Yap';
-                loginBtn.removeEventListener('click', openLoginModal);
-                loginBtn.addEventListener('click', handleLogout);
-                
-                closeLoginModal();
-                renderAdminCourses();
-                
-                showSuccessMessage('Başarıyla giriş yaptınız!');
-            } else {
-                alert('Kullanıcı adı veya şifre hatalı!');
-            }
-        }
-        
-        function handleLogout() {
-            currentUser = null;
-            adminPanel.style.display = 'none';
-            loginBtn.textContent = 'Öğretim Üyesi Girişi';
-            loginBtn.removeEventListener('click', handleLogout);
-            loginBtn.addEventListener('click', openLoginModal);
-        }
-        
-        function handleCreateCourse() {
-            const courseName = document.getElementById('courseName').value;
-            const courseDescription = document.getElementById('courseDescription').value;
-            
-            if (!courseName.trim()) {
-                alert('Ders adı boş olamaz!');
-                return;
-            }
-            
-            // Rastgele 5 haneli kod oluşturma
-            const code = Math.floor(10000 + Math.random() * 90000).toString();
-            
-            const newCourse = {
-                name: courseName,
-                description: courseDescription,
-                code: code,
-                instructor: currentUser.name,
-                participants: []
-            };
-            
-            // Dersi veritabanına kaydet
-            saveCourseToDB(newCourse);
-        }
-        
-        // Dersi veritabanına kaydet
-        function saveCourseToDB(course) {
-            if (!db) {
-                console.error("Veritabanı bağlantısı yok");
-                return;
-            }
-            
-            const transaction = db.transaction([COURSES_STORE], 'readwrite');
-            const store = transaction.objectStore(COURSES_STORE);
-            const request = store.add(course);
-            
-            request.onsuccess = function(event) {
-                const courseId = event.target.result;
-                course.id = courseId;
-                courses.push(course);
-                
-                closeCreateCourseModal();
-                renderCourses();
-                
-                showSuccessMessage(`Ders başarıyla oluşturuldu! Onay kodunuz: ${course.code}`);
-            };
-            
-            request.onerror = function(event) {
-                console.error("Ders kaydedilirken hata:", event.target.error);
-                alert('Ders oluşturulurken bir hata oluştu!');
-            };
-        }
-        
-        // Dersi silme işlemi
-        function handleDeleteCourse() {
-            if (!courseToDeleteId) return;
-            
-            // Dersi ve katılımcılarını veritabanından sil
-            deleteCourseFromDB(courseToDeleteId);
-        }
-        
-        // Dersi ve katılımcılarını veritabanından sil
-        function deleteCourseFromDB(courseId) {
-            if (!db) {
-                console.error("Veritabanı bağlantısı yok");
-                return;
-            }
-            
-            const transaction = db.transaction([COURSES_STORE, PARTICIPANTS_STORE], 'readwrite');
-            const coursesStore = transaction.objectStore(COURSES_STORE);
-            const participantsStore = transaction.objectStore(PARTICIPANTS_STORE);
-            
-            // Önce dersi sil
-            const deleteCourseRequest = coursesStore.delete(courseId);
-            
-            deleteCourseRequest.onsuccess = function() {
-                // Sonra bu derse ait katılımcıları sil
-                const index = participantsStore.index('courseId');
-                const getParticipantsRequest = index.getAll(courseId);
-                
-                getParticipantsRequest.onsuccess = function() {
-                    const participants = getParticipantsRequest.result;
-                    participants.forEach(participant => {
-                        participantsStore.delete(participant.id);
-                    });
-                    
-                    // Yerel veriden de kaldır
-                    courses = courses.filter(c => c.id !== courseId);
-                    
-                    closeDeleteCourseModal();
-                    renderCourses();
-                    
-                    showSuccessMessage('Ders ve tüm katılımcı verileri başarıyla silindi!');
-                };
-            };
-            
-            deleteCourseRequest.onerror = function(event) {
-                console.error("Ders silinirken hata:", event.target.error);
-                alert('Ders silinirken bir hata oluştu!');
-            };
-        }
-        
-        // Tüm verileri temizle
-        function handleClearAllData() {
-            if (!db) return;
-            
-            const transaction = db.transaction([COURSES_STORE, PARTICIPANTS_STORE], 'readwrite');
-            const coursesStore = transaction.objectStore(COURSES_STORE);
-            const participantsStore = transaction.objectStore(PARTICIPANTS_STORE);
-            
-            // Tüm dersleri sil
-            const clearCoursesRequest = coursesStore.clear();
-            
-            clearCoursesRequest.onsuccess = function() {
-                // Tüm katılımcıları sil
-                const clearParticipantsRequest = participantsStore.clear();
-                
-                clearParticipantsRequest.onsuccess = function() {
-                    courses = [];
-                    closeClearAllDataModal();
-                    renderCourses();
-                    
-                    showSuccessMessage('Tüm veriler başarıyla temizlendi!');
-                };
-            };
-            
-            clearCoursesRequest.onerror = function(event) {
-                console.error("Veriler temizlenirken hata:", event.target.error);
-                alert('Veriler temizlenirken bir hata oluştu!');
-            };
-        }
-        
-        function handleJoinCourse() {
-            const studentNumber = document.getElementById('studentNumber').value;
-            const studentName = document.getElementById('studentName').value;
-            const studentSurname = document.getElementById('studentSurname').value;
-            const confirmationCode = document.getElementById('confirmationCode').value;
-            
-            if (!studentNumber.trim() || !studentName.trim() || !studentSurname.trim() || !confirmationCode.trim()) {
-                alert('Tüm alanları doldurmalısınız!');
-                return;
-            }
-            
-            const course = courses.find(c => c.id === selectedCourseId);
-            
-            if (!course) {
-                alert('Ders bulunamadı!');
-                return;
-            }
-            
-            if (course.code !== confirmationCode) {
-                alert('Onay kodu hatalı!');
-                return;
-            }
-            
-            // Öğrenci zaten kayıtlı mı kontrol et
-            if (course.participants) {
-                const isAlreadyRegistered = course.participants.some(p => p.studentNumber === studentNumber);
-                
-                if (isAlreadyRegistered) {
-                    alert('Bu öğrenci numarası ile zaten kayıtlısınız!');
-                    return;
-                }
-            }
-            
-            // Öğrenciyi derse ekle
-            const participant = {
-                courseId: selectedCourseId,
-                studentNumber: studentNumber,
-                studentName: studentName,
-                studentSurname: studentSurname,
-                joinDate: new Date().toISOString()
-            };
-            
-            // Katılımcıyı veritabanına kaydet
-            saveParticipantToDB(participant);
-        }
-        
-        // Katılımcıyı veritabanına kaydet
-        function saveParticipantToDB(participant) {
-            if (!db) {
-                console.error("Veritabanı bağlantısı yok");
-                return;
-            }
-            
-            const transaction = db.transaction([PARTICIPANTS_STORE], 'readwrite');
-            const store = transaction.objectStore(PARTICIPANTS_STORE);
-            const request = store.add(participant);
-            
-            request.onsuccess = function(event) {
-                const participantId = event.target.result;
-                participant.id = participantId;
-                
-                // Yerel ders verisine ekle
-                const course = courses.find(c => c.id === participant.courseId);
-                if (course) {
-                    if (!course.participants) {
-                        course.participants = [];
-                    }
-                    course.participants.push(participant);
-                }
-                
-                closeJoinCourseModal();
-                renderCourses();
-                
-                showSuccessMessage('Derse başarıyla katıldınız!');
-            };
-            
-            request.onerror = function(event) {
-                console.error("Katılımcı kaydedilirken hata:", event.target.error);
-                alert('Katılım işlemi sırasında bir hata oluştu!');
-            };
-        }
-        
-        function handleExportParticipants() {
-            const course = courses.find(c => c.id === selectedCourseId);
-            
-            if (!course || !course.participants || course.participants.length === 0) {
-                alert('İndirilecek katılımcı bulunmamaktadır!');
-                return;
-            }
-            
-            // Excel dosyası oluşturma - geniş sütunlarla
-            const worksheetData = [
-                ['Öğrenci No', 'Ad', 'Soyad', 'Katılma Tarihi'],
-                ...course.participants.map(p => [
-                    p.studentNumber,
-                    p.studentName,
-                    p.studentSurname,
-                    new Date(p.joinDate).toLocaleDateString('tr-TR')
-                ])
-            ];
-            
-            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-            
-            // Sütun genişliklerini ayarla
-            const colWidths = [
-                { wch: 15 }, // Öğrenci No
-                { wch: 15 }, // Ad
-                { wch: 15 }, // Soyad
-                { wch: 20 }  // Katılma Tarihi
-            ];
-            worksheet['!cols'] = colWidths;
-            
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Katılımcılar");
-            
-            // Excel dosyasını indirme
-            XLSX.writeFile(workbook, `${course.name}_katilimcilar.xlsx`);
-            
-            showSuccessMessage('Katılımcı listesi Excel formatında indirildi!');
-        }
-        
-        function showSuccessMessage(message) {
-            // Önceki başarı mesajlarını temizle
-            const existingMessages = document.querySelectorAll('.success-message');
-            existingMessages.forEach(msg => msg.remove());
-            
-            const successMessage = document.createElement('div');
-            successMessage.className = 'success-message';
-            successMessage.textContent = message;
-            
-            // Mesajı ana içeriğin üstüne ekle
-            const main = document.querySelector('main .container');
-            main.insertBefore(successMessage, main.firstChild);
-            
-            // 5 saniye sonra mesajı kaldır
-            setTimeout(() => {
-                successMessage.remove();
-            }, 5000);
-        }
-        
-        function showErrorMessage(message) {
-            alert(message); // Basit bir hata gösterimi
-        }
-    </script>
+      }
+    }
+
+    function tx(storeNames, mode='readonly'){ return db.transaction(storeNames, mode); }
+
+    function loadCoursesFromDB(){
+      if(!db) return;
+      const req = tx([COURSES_STORE]).objectStore(COURSES_STORE).getAll();
+      req.onsuccess = (e) => {
+        courses = e.target.result || [];
+        // Attach participants to each course
+        courses.forEach(c => loadParticipantsForCourse(c.id));
+        renderCourses();
+      };
+    }
+
+    function loadParticipantsForCourse(courseId){
+      const store = tx([PARTICIPANTS_STORE]).objectStore(PARTICIPANTS_STORE);
+      const idx = store.index('courseId');
+      const req = idx.getAll(courseId);
+      req.onsuccess = (e) => {
+        const p = e.target.result || [];
+        const course = courses.find(c => c.id === courseId);
+        if(course) course.participants = p;
+      }
+    }
+
+    // ------------------ Render ------------------
+    function renderCourses(){
+      coursesContainer.innerHTML = '';
+      if(!courses.length){ noCoursesMessage.style.display = 'block'; } else { noCoursesMessage.style.display = 'none'; }
+
+      courses.forEach(course => {
+        const el = document.createElement('div');
+        el.className = 'card course-card';
+        const showCode = currentUser && course.instructor === currentUser.name;
+        el.innerHTML = `
+          <div class="course-title">${escapeHtml(course.name)}</div>
+          <div class="muted" style="margin-bottom:10px">${escapeHtml(course.description || '')}</div>
+          <div class="course-meta">
+            <span class="badge">Eğitmen: ${escapeHtml(course.instructor)}</span>
+            <span class="badge">Katılımcı: ${course.participants ? course.participants.length : 0}</span>
+            ${course.classroom ? `<span class="badge badge-classroom">Sınıf: ${escapeHtml(course.classroom)}</span>` : ''}
+            ${showCode ? `<span class="badge">Onay Kodu: <strong>${course.code}</strong></span>` : ''}
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap">
+            <button class="btn btn-primary join-course-btn" data-id="${course.id}">Derse Katıl</button>
+            ${currentUser && course.instructor === currentUser.name ? `
+              <button class="btn view-participants-btn" data-id="${course.id}">Katılımcıları Gör</button>
+              <button class="btn btn-success export-course-btn" data-id="${course.id}">Excel</button>
+              <button class="btn btn-danger delete-course-btn" data-id="${course.id}" data-name="${encodeURIComponent(course.name)}">Sil</button>
+            `: ''}
+          </div>
+        `;
+        coursesContainer.appendChild(el);
+      });
+
+      // attach events
+      document.querySelectorAll('.join-course-btn').forEach(b => b.addEventListener('click', () => {
+        selectedCourseId = parseInt(b.getAttribute('data-id')); openModal(joinCourseModal);
+      }));
+      document.querySelectorAll('.view-participants-btn').forEach(b => b.addEventListener('click', () => {
+        selectedCourseId = parseInt(b.getAttribute('data-id')); openViewParticipantsModal();
+      }));
+      document.querySelectorAll('.export-course-btn').forEach(b => b.addEventListener('click', () => {
+        selectedCourseId = parseInt(b.getAttribute('data-id')); handleExportParticipants();
+      }));
+      document.querySelectorAll('.delete-course-btn').forEach(b => b.addEventListener('click', () => {
+        courseToDeleteId = parseInt(b.getAttribute('data-id'));
+        const name = decodeURIComponent(b.getAttribute('data-name'));
+        document.getElementById('deleteCourseMessage').textContent = `"${name}" dersini silmek istediğinizden emin misiniz?`;
+        openModal(deleteCourseModal);
+      }));
+
+      if(currentUser) renderAdminCourses();
+    }
+
+    function renderAdminCourses(){
+      const term = (adminSearch.value || '').toLowerCase();
+      const list = courses.filter(c => currentUser && c.instructor === currentUser.name)
+                          .filter(c => !term || 
+                            (c.name?.toLowerCase().includes(term) || 
+                             (c.description||'').toLowerCase().includes(term) ||
+                             (c.classroom||'').toLowerCase().includes(term)));
+      adminCoursesList.innerHTML = '';
+      if(!list.length){
+        adminCoursesList.innerHTML = '<div class="empty">Bu kriterle eşleşen ders bulunamadı.</div>';
+        return;
+      }
+      list.forEach(course => {
+        const item = document.createElement('div');
+        item.className = 'card';
+        item.innerHTML = `
+          <div class="course-title">${escapeHtml(course.name)}</div>
+          <div class="muted">${escapeHtml(course.description || '')}</div>
+          <div class="course-meta" style="margin-top:10px">
+            ${course.classroom ? `<span class="badge badge-classroom">Sınıf: ${escapeHtml(course.classroom)}</span>` : ''}
+            <span class="badge">Onay Kodu: <strong>${course.code}</strong></span>
+            <span class="badge">Katılımcı: ${course.participants ? course.participants.length : 0}</span>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
+            <button class="btn view-participants-btn" data-id="${course.id}">Katılımcıları Gör</button>
+            <button class="btn btn-success export-course-btn" data-id="${course.id}">Excel</button>
+            <button class="btn btn-danger delete-course-btn" data-id="${course.id}" data-name="${encodeURIComponent(course.name)}">Dersi Sil</button>
+          </div>
+        `;
+        adminCoursesList.appendChild(item);
+      });
+
+      // Re-bind
+      adminPanel.querySelectorAll('.view-participants-btn').forEach(b => b.addEventListener('click', () => { selectedCourseId = parseInt(b.getAttribute('data-id')); openViewParticipantsModal(); }));
+      adminPanel.querySelectorAll('.export-course-btn').forEach(b => b.addEventListener('click', () => { selectedCourseId = parseInt(b.getAttribute('data-id')); handleExportParticipants(); }));
+      adminPanel.querySelectorAll('.delete-course-btn').forEach(b => b.addEventListener('click', () => {
+        courseToDeleteId = parseInt(b.getAttribute('data-id'));
+        const name = decodeURIComponent(b.getAttribute('data-name'));
+        document.getElementById('deleteCourseMessage').textContent = `"${name}" dersini silmek istediğinizden emin misiniz?`;
+        openModal(deleteCourseModal);
+      }));
+    }
+
+    // ------------------ Modal ------------------
+    function openModal(modal){ modal.classList.add('open'); }
+    function closeModal(modal){ modal.classList.remove('open'); }
+
+    function openViewParticipantsModal(){
+      const course = courses.find(c => c.id === selectedCourseId);
+      if(!course) return;
+      document.getElementById('participantsTitle').textContent = `${course.name} - Katılımcılar ${course.classroom ? `(${course.classroom})` : ''}`;
+      const listEl = document.getElementById('participantsList');
+      listEl.innerHTML = '';
+      if(!course.participants || !course.participants.length){
+        listEl.innerHTML = '<div class="empty">Bu derse henüz katılımcı yok.</div>';
+      } else {
+        const table = document.createElement('table');
+        table.style.width = '100%'; table.style.borderCollapse = 'collapse';
+        table.innerHTML = `
+          <thead>
+            <tr style="border-bottom:1px solid rgba(0,0,0,0.1)">
+              <th style="text-align:left; padding:8px 12px">Öğrenci No</th>
+              <th style="text-align:left; padding:8px 12px">Ad</th>
+              <th style="text-align:left; padding:8px 12px">Soyad</th>
+              <th style="text-align:left; padding:8px 12px">Katılma Tarihi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${course.participants.map(p => `
+              <tr style="border-bottom:1px solid rgba(0,0,0,0.05)">
+                <td style="padding:8px 12px">${escapeHtml(p.studentNumber)}</td>
+                <td style="padding:8px 12px">${escapeHtml(p.name)}</td>
+                <td style="padding:8px 12px">${escapeHtml(p.surname)}</td>
+                <td style="padding:8px 12px">${new Date(p.joinDate).toLocaleString('tr-TR')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        `;
+        listEl.appendChild(table);
+      }
+      openModal(viewParticipantsModal);
+    }
+
+    // ------------------ Handlers ------------------
+    function handleLogin(){
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if(!username || !password){ notify('Lütfen kullanıcı adı ve şifre girin!', 'warning'); return; }
+      if(ADMIN_ACCOUNTS[username] && ADMIN_ACCOUNTS[username].password === password){
+        currentUser = { name: ADMIN_ACCOUNTS[username].name };
+        instructorNameEl.textContent = currentUser.name;
+        adminPanel.style.display = 'block';
+        closeModal(loginModal);
+        notify(`Hoş geldiniz, ${currentUser.name}!`, 'success');
+        renderCourses();
+      } else {
+        notify('Kullanıcı adı veya şifre hatalı!', 'error');
+      }
+    }
+
+    function handleCreateCourse(){
+      const name = document.getElementById('courseName').value.trim();
+      const description = document.getElementById('courseDescription').value.trim();
+      const classroom = document.getElementById('courseClassroom').value;
+      if(!name){ notify('Ders adı gerekli!', 'warning'); return; }
+      if(!classroom){ notify('Lütfen sınıf seçiniz!', 'warning'); return; }
+      const code = generateCode();
+      const course = {
+        name, description, classroom, code, instructor: currentUser.name,
+        createdDate: new Date().toISOString()
+      };
+      const store = tx([COURSES_STORE], 'readwrite').objectStore(COURSES_STORE);
+      const req = store.add(course);
+      req.onsuccess = () => {
+        notify(`"${name}" dersi oluşturuldu! Onay kodu: ${code}`, 'success');
+        closeModal(createCourseModal);
+        document.getElementById('courseName').value = '';
+        document.getElementById('courseDescription').value = '';
+        document.getElementById('courseClassroom').value = '';
+        loadCoursesFromDB();
+      };
+    }
+
+    function handleDeleteCourse(){
+      if(!courseToDeleteId) return;
+      const store = tx([COURSES_STORE], 'readwrite').objectStore(COURSES_STORE);
+      const req = store.delete(courseToDeleteId);
+      req.onsuccess = () => {
+        // Delete participants
+        const pStore = tx([PARTICIPANTS_STORE], 'readwrite').objectStore(PARTICIPANTS_STORE);
+        const idx = pStore.index('courseId');
+        const req2 = idx.openCursor(courseToDeleteId);
+        req2.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if(cursor){ cursor.delete(); cursor.continue(); }
+        };
+        notify('Ders silindi!', 'success');
+        closeModal(deleteCourseModal);
+        loadCoursesFromDB();
+      };
+    }
+
+    function handleClearAllData(){
+      const store = tx([COURSES_STORE], 'readwrite').objectStore(COURSES_STORE);
+      const req = store.clear();
+      req.onsuccess = () => {
+        const pStore = tx([PARTICIPANTS_STORE], 'readwrite').objectStore(PARTICIPANTS_STORE);
+        const req2 = pStore.clear();
+        req2.onsuccess = () => {
+          notify('Tüm veriler silindi!', 'success');
+          closeModal(clearAllDataModal);
+          loadCoursesFromDB();
+        };
+      };
+    }
+
+    function handleJoinCourse(){
+      const studentNumber = document.getElementById('studentNumber').value.trim();
+      const code = document.getElementById('confirmationCode').value.trim();
+      const name = document.getElementById('studentName').value.trim();
+      const surname = document.getElementById('studentSurname').value.trim();
+      if(!studentNumber || !code || !name || !surname){ notify('Lütfen tüm alanları doldurun!', 'warning'); return; }
+      const course = courses.find(c => c.code === code);
+      if(!course){ notify('Geçersiz onay kodu!', 'error'); return; }
+      // Check if already joined
+      const store = tx([PARTICIPANTS_STORE]).objectStore(PARTICIPANTS_STORE);
+      const idx = store.index('studentNumber');
+      const req = idx.get(studentNumber);
+      req.onsuccess = (e) => {
+        if(e.target.result){ notify('Bu öğrenci numarası zaten kayıtlı!', 'warning'); return; }
+        // Add participant
+        const pStore = tx([PARTICIPANTS_STORE], 'readwrite').objectStore(PARTICIPANTS_STORE);
+        const participant = { courseId: course.id, studentNumber, name, surname, joinDate: new Date().toISOString() };
+        const req2 = pStore.add(participant);
+        req2.onsuccess = () => {
+          notify(`"${course.name}" dersine başarıyla katıldınız!`, 'success');
+          closeModal(joinCourseModal);
+          document.getElementById('studentNumber').value = '';
+          document.getElementById('confirmationCode').value = '';
+          document.getElementById('studentName').value = '';
+          document.getElementById('studentSurname').value = '';
+          loadCoursesFromDB();
+        };
+      };
+    }
+
+    function handleExportParticipants(){
+      const course = courses.find(c => c.id === selectedCourseId);
+      if(!course) return;
+      if(!course.participants || !course.participants.length){ notify('Katılımcı bulunmuyor!', 'warning'); return; }
+      const data = course.participants.map(p => ({
+        'Öğrenci No': p.studentNumber, 'Ad': p.name, 'Soyad': p.surname,
+        'Katılma Tarihi': new Date(p.joinDate).toLocaleString('tr-TR')
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Katılımcılar');
+      XLSX.writeFile(wb, `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_katilimci_listesi.xlsx`);
+      notify('Excel dosyası indiriliyor...', 'success');
+    }
+
+    // ------------------ Utils ------------------
+    function generateCode(){ return Math.random().toString(36).substring(2, 7).toUpperCase(); }
+    function escapeHtml(unsafe){ return unsafe?.replace(/[&<"'>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[m]) || ''; }
+    function notify(message, type='info'){
+      const item = document.createElement('div');
+      item.className = `toast-item ${type}`;
+      item.textContent = message;
+      toastRoot.appendChild(item);
+      setTimeout(() => { if(item.parentNode) item.parentNode.removeChild(item); }, 4000);
+    }
+  </script>
 </body>
 </html>
