@@ -182,6 +182,26 @@
     .modal-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px }
     .modal-title{ font-size:20px; font-weight:800; color: var(--primary-dark) }
 
+    /* QR Code Modal */
+    .qr-code-container {
+      text-align: center;
+      padding: 10px;
+    }
+    .qr-code-image {
+      max-width: 300px;
+      max-height: 300px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      margin: 15px 0;
+    }
+    .qr-course-info {
+      background: rgba(37, 99, 235, 0.08);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin: 15px 0;
+    }
+
     /* Toast */
     .toast{ position: fixed; right:16px; bottom:16px; display:grid; gap:10px; z-index:1100 }
     .toast-item{ 
@@ -223,7 +243,9 @@
         </div>
       </a>
       <div class="nav-actions">
+        <button class="btn" id="showQrBtn" style="display:none">QR Kod Göster</button>
         <button class="btn btn-primary" id="loginBtn">Öğretim Üyesi Girişi</button>
+        <button class="btn btn-danger" id="logoutBtn" style="display:none">Çıkış Yap</button>
       </div>
     </div>
   </header>
@@ -246,6 +268,7 @@
       <p class="muted">Hoş geldiniz, <strong id="instructorName">-</strong>. Ders oluşturabilir, katılımcıları görüntüleyebilir ve Excel olarak indirebilirsiniz.</p>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
         <button class="btn btn-primary" id="createCourseBtn">Yeni Ders Oluştur</button>
+        <button class="btn" id="showQrPanelBtn">QR Kod Göster</button>
         <button class="btn btn-danger" id="clearAllDataBtn">Tüm Verileri Temizle</button>
       </div>
 
@@ -274,7 +297,7 @@
         <input id="password" type="password" class="input" placeholder="Şifre" />
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px">
-        <button class="btn" id="confirmLoginBtn">Giriş Yap</button>
+        <button class="btn btn-primary" id="confirmLoginBtn">Giriş Yap</button>
       </div>
     </div>
   </div>
@@ -322,6 +345,27 @@
       <div class="muted" style="background:rgba(37, 99, 235, 0.08); border:1px solid rgba(37, 99, 235, 0.2); padding:12px 14px; border-radius:10px">Ders oluşturulduğunda sistem otomatik <strong>5 haneli onay kodu</strong> üretir. Bu kodu öğrencilerle paylaşın.</div>
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px">
         <button class="btn btn-primary" id="confirmCreateCourseBtn">Oluştur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div class="modal" id="qrCodeModal" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="qrTitle">Ders QR Kodu</div>
+        <button class="btn" id="cancelQrBtn" aria-label="Kapat">✕</button>
+      </div>
+      <div class="qr-code-container">
+        <div class="qr-course-info">
+          <strong id="qrCourseName">-</strong><br>
+          <span id="qrCourseCode" class="muted">Onay Kodu: -</span>
+        </div>
+        <img id="qrCodeImage" src="qr.png" alt="Ders QR Kodu" class="qr-code-image">
+        <p class="muted">Öğrenciler bu QR kodu okutarak veya <strong id="qrManualCode">-</strong> onay kodunu girerek derse katılabilir.</p>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px">
+        <button class="btn btn-primary" id="closeQrBtn">Kapat</button>
       </div>
     </div>
   </div>
@@ -404,7 +448,6 @@
     const COURSES_STORE = 'courses';
     const PARTICIPANTS_STORE = 'participants';
 
-    // Yeni admin hesapları ve şifreleri
     const ADMIN_ACCOUNTS = {
       'admin': { password: '12345', name: 'Prof. Dr. Cem Harun Meydan' },
       'admin1': { password: '73928', name: 'Prof. Dr. Neslihan Künye Polat' },
@@ -418,379 +461,713 @@
     let currentUser = null;
     let selectedCourseId = null;
     let courseToDeleteId = null;
+    let lastCreatedCourse = null;
 
     // ------------------ Elements ------------------
-    const coursesContainer = document.getElementById('coursesContainer');
-    const noCoursesMessage = document.getElementById('noCoursesMessage');
-    const adminPanel = document.getElementById('adminPanel');
-    const adminCoursesList = document.getElementById('adminCoursesList');
-    const instructorNameEl = document.getElementById('instructorName');
-    const adminSearch = document.getElementById('adminSearch');
-    const adminSearchClear = document.getElementById('adminSearchClear');
-    const toastRoot = document.getElementById('toast');
+    const elements = {
+      coursesContainer: document.getElementById('coursesContainer'),
+      noCoursesMessage: document.getElementById('noCoursesMessage'),
+      adminPanel: document.getElementById('adminPanel'),
+      adminCoursesList: document.getElementById('adminCoursesList'),
+      instructorName: document.getElementById('instructorName'),
+      adminSearch: document.getElementById('adminSearch'),
+      adminSearchClear: document.getElementById('adminSearchClear'),
+      toast: document.getElementById('toast'),
+      loginBtn: document.getElementById('loginBtn'),
+      logoutBtn: document.getElementById('logoutBtn'),
+      showQrBtn: document.getElementById('showQrBtn'),
+      showQrPanelBtn: document.getElementById('showQrPanelBtn'),
+      
+      // Modals
+      loginModal: document.getElementById('loginModal'),
+      createCourseModal: document.getElementById('createCourseModal'),
+      qrCodeModal: document.getElementById('qrCodeModal'),
+      deleteCourseModal: document.getElementById('deleteCourseModal'),
+      clearAllDataModal: document.getElementById('clearAllDataModal'),
+      joinCourseModal: document.getElementById('joinCourseModal'),
+      viewParticipantsModal: document.getElementById('viewParticipantsModal'),
+      
+      // QR Elements
+      qrCourseName: document.getElementById('qrCourseName'),
+      qrCourseCode: document.getElementById('qrCourseCode'),
+      qrManualCode: document.getElementById('qrManualCode'),
+      qrCodeImage: document.getElementById('qrCodeImage')
+    };
 
-    // Modals
-    const loginModal = document.getElementById('loginModal');
-    const createCourseModal = document.getElementById('createCourseModal');
-    const deleteCourseModal = document.getElementById('deleteCourseModal');
-    const clearAllDataModal = document.getElementById('clearAllDataModal');
-    const joinCourseModal = document.getElementById('joinCourseModal');
-    const viewParticipantsModal = document.getElementById('viewParticipantsModal');
-
-    // Buttons
-    const loginBtn = document.getElementById('loginBtn');
-    const cancelLoginBtn = document.getElementById('cancelLoginBtn');
-    const confirmLoginBtn = document.getElementById('confirmLoginBtn');
-    const createCourseBtn = document.getElementById('createCourseBtn');
-    const cancelCreateCourseBtn = document.getElementById('cancelCreateCourseBtn');
-    const confirmCreateCourseBtn = document.getElementById('confirmCreateCourseBtn');
-    const cancelDeleteCourseBtn = document.getElementById('cancelDeleteCourseBtn');
-    const confirmDeleteCourseBtn = document.getElementById('confirmDeleteCourseBtn');
-    const clearAllDataBtn = document.getElementById('clearAllDataBtn');
-    const cancelClearAllDataBtn = document.getElementById('cancelClearAllDataBtn');
-    const confirmClearAllDataBtn = document.getElementById('confirmClearAllDataBtn');
-    const cancelJoinCourseBtn = document.getElementById('cancelJoinCourseBtn');
-    const confirmJoinCourseBtn = document.getElementById('confirmJoinCourseBtn');
-    const closeParticipantsBtn = document.getElementById('closeParticipantsBtn');
-    const exportParticipantsBtn = document.getElementById('exportParticipantsBtn');
-
-    document.addEventListener('DOMContentLoaded', () => {
+    // ------------------ Initialization ------------------
+    document.addEventListener('DOMContentLoaded', function() {
       initDatabase();
-      // Listeners
-      loginBtn.addEventListener('click', () => openModal(loginModal));
-      cancelLoginBtn.addEventListener('click', () => closeModal(loginModal));
-      confirmLoginBtn.addEventListener('click', handleLogin);
-
-      createCourseBtn?.addEventListener('click', () => openModal(createCourseModal));
-      cancelCreateCourseBtn?.addEventListener('click', () => closeModal(createCourseModal));
-      confirmCreateCourseBtn?.addEventListener('click', handleCreateCourse);
-
-      cancelDeleteCourseBtn?.addEventListener('click', () => closeModal(deleteCourseModal));
-      confirmDeleteCourseBtn?.addEventListener('click', handleDeleteCourse);
-
-      clearAllDataBtn?.addEventListener('click', () => openModal(clearAllDataModal));
-      cancelClearAllDataBtn?.addEventListener('click', () => closeModal(clearAllDataModal));
-      confirmClearAllDataBtn?.addEventListener('click', handleClearAllData);
-
-      cancelJoinCourseBtn?.addEventListener('click', () => closeModal(joinCourseModal));
-      confirmJoinCourseBtn?.addEventListener('click', handleJoinCourse);
-
-      closeParticipantsBtn?.addEventListener('click', () => closeModal(viewParticipantsModal));
-      exportParticipantsBtn?.addEventListener('click', handleExportParticipants);
-
-      adminSearch.addEventListener('input', renderAdminCourses);
-      adminSearchClear.addEventListener('click', () => { adminSearch.value = ''; renderAdminCourses(); });
-
-      // Close modal on backdrop
-      document.querySelectorAll('.modal').forEach(m => {
-        m.addEventListener('click', (e) => { if (e.target === m) closeModal(m); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(m); });
-      })
+      setupEventListeners();
+      checkSavedLogin();
     });
 
-    // ------------------ IndexedDB ------------------
-    function initDatabase(){
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onerror = (e) => { notify('Veritabanı bağlantı hatası!', 'error'); };
-      request.onsuccess = (e) => { db = e.target.result; loadCoursesFromDB(); };
-      request.onupgradeneeded = (e) => {
-        const database = e.target.result;
-        if(!database.objectStoreNames.contains(COURSES_STORE)){
-          const cs = database.createObjectStore(COURSES_STORE, { keyPath:'id', autoIncrement:true });
-          cs.createIndex('instructor', 'instructor', { unique:false });
+    function setupEventListeners() {
+      // Header buttons
+      elements.loginBtn.addEventListener('click', () => openModal(elements.loginModal));
+      elements.logoutBtn.addEventListener('click', handleLogout);
+      elements.showQrBtn.addEventListener('click', showLastCreatedCourseQr);
+      elements.showQrPanelBtn.addEventListener('click', showLastCreatedCourseQr);
+
+      // Login modal
+      document.getElementById('cancelLoginBtn').addEventListener('click', () => closeModal(elements.loginModal));
+      document.getElementById('confirmLoginBtn').addEventListener('click', handleLogin);
+
+      // Create course modal
+      document.getElementById('createCourseBtn').addEventListener('click', () => openModal(elements.createCourseModal));
+      document.getElementById('cancelCreateCourseBtn').addEventListener('click', () => closeModal(elements.createCourseModal));
+      document.getElementById('confirmCreateCourseBtn').addEventListener('click', handleCreateCourse);
+
+      // QR modal
+      document.getElementById('cancelQrBtn').addEventListener('click', () => closeModal(elements.qrCodeModal));
+      document.getElementById('closeQrBtn').addEventListener('click', () => closeModal(elements.qrCodeModal));
+
+      // Delete course modal
+      document.getElementById('cancelDeleteCourseBtn').addEventListener('click', () => closeModal(elements.deleteCourseModal));
+      document.getElementById('confirmDeleteCourseBtn').addEventListener('click', handleDeleteCourse);
+
+      // Clear all data modal
+      document.getElementById('clearAllDataBtn').addEventListener('click', () => openModal(elements.clearAllDataModal));
+      document.getElementById('cancelClearAllDataBtn').addEventListener('click', () => closeModal(elements.clearAllDataModal));
+      document.getElementById('confirmClearAllDataBtn').addEventListener('click', handleClearAllData);
+
+      // Join course modal
+      document.getElementById('cancelJoinCourseBtn').addEventListener('click', () => closeModal(elements.joinCourseModal));
+      document.getElementById('confirmJoinCourseBtn').addEventListener('click', handleJoinCourse);
+
+      // Participants modal
+      document.getElementById('closeParticipantsBtn').addEventListener('click', () => closeModal(elements.viewParticipantsModal));
+      document.getElementById('exportParticipantsBtn').addEventListener('click', handleExportParticipants);
+
+      // Search
+      elements.adminSearch.addEventListener('input', renderAdminCourses);
+      elements.adminSearchClear.addEventListener('click', () => {
+        elements.adminSearch.value = '';
+        renderAdminCourses();
+      });
+
+      // Close modals on backdrop click and ESC key
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeModal(modal);
+        });
+      });
+      
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal.open').forEach(modal => closeModal(modal));
         }
-        if(!database.objectStoreNames.contains(PARTICIPANTS_STORE)){
-          const ps = database.createObjectStore(PARTICIPANTS_STORE, { keyPath:'id', autoIncrement:true });
-          ps.createIndex('courseId', 'courseId', { unique:false });
-          ps.createIndex('studentNumber', 'studentNumber', { unique:false });
+      });
+    }
+
+    // ------------------ Session Management ------------------
+    function checkSavedLogin() {
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        updateUIForLoggedInUser();
+        
+        const savedLastCourse = localStorage.getItem('lastCreatedCourse');
+        if (savedLastCourse) {
+          lastCreatedCourse = JSON.parse(savedLastCourse);
         }
       }
     }
 
-    function tx(storeNames, mode='readonly'){ return db.transaction(storeNames, mode); }
+    function updateUIForLoggedInUser() {
+      elements.instructorName.textContent = currentUser.name;
+      elements.adminPanel.style.display = 'block';
+      elements.loginBtn.style.display = 'none';
+      elements.logoutBtn.style.display = 'block';
+      elements.showQrBtn.style.display = 'block';
+    }
 
-    function loadCoursesFromDB(){
-      if(!db) return;
-      const req = tx([COURSES_STORE]).objectStore(COURSES_STORE).getAll();
-      req.onsuccess = (e) => {
-        courses = e.target.result || [];
-        // Attach participants to each course
-        courses.forEach(c => loadParticipantsForCourse(c.id));
-        renderCourses();
+    function handleLogout() {
+      currentUser = null;
+      localStorage.removeItem('currentUser');
+      elements.adminPanel.style.display = 'none';
+      elements.loginBtn.style.display = 'block';
+      elements.logoutBtn.style.display = 'none';
+      elements.showQrBtn.style.display = 'none';
+      notify('Çıkış yapıldı.', 'success');
+      renderCourses();
+    }
+
+    // ------------------ Database Operations ------------------
+    function initDatabase() {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      
+      request.onerror = () => notify('Veritabanı bağlantı hatası!', 'error');
+      
+      request.onsuccess = (event) => {
+        db = event.target.result;
+        loadCoursesFromDB();
+      };
+      
+      request.onupgradeneeded = (event) => {
+        const database = event.target.result;
+        
+        if (!database.objectStoreNames.contains(COURSES_STORE)) {
+          const store = database.createObjectStore(COURSES_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('name', 'name', { unique: false });
+        }
+        
+        if (!database.objectStoreNames.contains(PARTICIPANTS_STORE)) {
+          const store = database.createObjectStore(PARTICIPANTS_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('courseId', 'courseId', { unique: false });
+          store.createIndex('studentNumber', 'studentNumber', { unique: false });
+        }
       };
     }
 
-    function loadParticipantsForCourse(courseId){
-      const store = tx([PARTICIPANTS_STORE]).objectStore(PARTICIPANTS_STORE);
-      const idx = store.index('courseId');
-      const req = idx.getAll(courseId);
-      req.onsuccess = (e) => {
-        const p = e.target.result || [];
-        const course = courses.find(c => c.id === courseId);
-        if(course) course.participants = p;
-      }
+    function loadCoursesFromDB() {
+      if (!db) return;
+      
+      const transaction = db.transaction([COURSES_STORE], 'readonly');
+      const store = transaction.objectStore(COURSES_STORE);
+      const request = store.getAll();
+      
+      request.onsuccess = (event) => {
+        courses = event.target.result || [];
+        renderCourses();
+        if (currentUser) renderAdminCourses();
+      };
+      
+      request.onerror = () => notify('Dersler yüklenirken hata oluştu!', 'error');
     }
 
-    // ------------------ Render ------------------
-    function renderCourses(){
-      coursesContainer.innerHTML = '';
-      if(!courses.length){ noCoursesMessage.style.display = 'block'; } else { noCoursesMessage.style.display = 'none'; }
-
-      courses.forEach(course => {
-        const el = document.createElement('div');
-        el.className = 'card course-card';
-        const showCode = currentUser && course.instructor === currentUser.name;
-        el.innerHTML = `
-          <div class="course-title">${escapeHtml(course.name)}</div>
-          <div class="muted" style="margin-bottom:10px">${escapeHtml(course.description || '')}</div>
-          <div class="course-meta">
-            <span class="badge">Eğitmen: ${escapeHtml(course.instructor)}</span>
-            <span class="badge">Katılımcı: ${course.participants ? course.participants.length : 0}</span>
-            ${course.classroom ? `<span class="badge badge-classroom">Sınıf: ${escapeHtml(course.classroom)}</span>` : ''}
-            ${showCode ? `<span class="badge">Onay Kodu: <strong>${course.code}</strong></span>` : ''}
-          </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap">
-            <button class="btn btn-primary join-course-btn" data-id="${course.id}">Derse Katıl</button>
-            ${currentUser && course.instructor === currentUser.name ? `
-              <button class="btn view-participants-btn" data-id="${course.id}">Katılımcıları Gör</button>
-              <button class="btn btn-success export-course-btn" data-id="${course.id}">Excel</button>
-              <button class="btn btn-danger delete-course-btn" data-id="${course.id}" data-name="${encodeURIComponent(course.name)}">Sil</button>
-            `: ''}
-          </div>
-        `;
-        coursesContainer.appendChild(el);
-      });
-
-      // attach events
-      document.querySelectorAll('.join-course-btn').forEach(b => b.addEventListener('click', () => {
-        selectedCourseId = parseInt(b.getAttribute('data-id')); openModal(joinCourseModal);
-      }));
-      document.querySelectorAll('.view-participants-btn').forEach(b => b.addEventListener('click', () => {
-        selectedCourseId = parseInt(b.getAttribute('data-id')); openViewParticipantsModal();
-      }));
-      document.querySelectorAll('.export-course-btn').forEach(b => b.addEventListener('click', () => {
-        selectedCourseId = parseInt(b.getAttribute('data-id')); handleExportParticipants();
-      }));
-      document.querySelectorAll('.delete-course-btn').forEach(b => b.addEventListener('click', () => {
-        courseToDeleteId = parseInt(b.getAttribute('data-id'));
-        const name = decodeURIComponent(b.getAttribute('data-name'));
-        document.getElementById('deleteCourseMessage').textContent = `"${name}" dersini silmek istediğinizden emin misiniz?`;
-        openModal(deleteCourseModal);
-      }));
-
-      if(currentUser) renderAdminCourses();
+    function addCourse(course, callback) {
+      const transaction = db.transaction([COURSES_STORE], 'readwrite');
+      const store = transaction.objectStore(COURSES_STORE);
+      const request = store.add(course);
+      
+      request.onsuccess = (event) => {
+        course.id = event.target.result;
+        courses.push(course);
+        renderCourses();
+        if (currentUser) renderAdminCourses();
+        if (callback) callback(course);
+      };
+      
+      request.onerror = () => notify('Ders eklenemedi!', 'error');
     }
 
-    function renderAdminCourses(){
-      const term = (adminSearch.value || '').toLowerCase();
-      const list = courses.filter(c => currentUser && c.instructor === currentUser.name)
-                          .filter(c => !term || 
-                            (c.name?.toLowerCase().includes(term) || 
-                             (c.description||'').toLowerCase().includes(term) ||
-                             (c.classroom||'').toLowerCase().includes(term)));
-      adminCoursesList.innerHTML = '';
-      if(!list.length){
-        adminCoursesList.innerHTML = '<div class="empty">Bu kriterle eşleşen ders bulunamadı.</div>';
-        return;
-      }
-      list.forEach(course => {
-        const item = document.createElement('div');
-        item.className = 'card';
-        item.innerHTML = `
-          <div class="course-title">${escapeHtml(course.name)}</div>
-          <div class="muted">${escapeHtml(course.description || '')}</div>
-          <div class="course-meta" style="margin-top:10px">
-            ${course.classroom ? `<span class="badge badge-classroom">Sınıf: ${escapeHtml(course.classroom)}</span>` : ''}
-            <span class="badge">Onay Kodu: <strong>${course.code}</strong></span>
-            <span class="badge">Katılımcı: ${course.participants ? course.participants.length : 0}</span>
-          </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
-            <button class="btn view-participants-btn" data-id="${course.id}">Katılımcıları Gör</button>
-            <button class="btn btn-success export-course-btn" data-id="${course.id}">Excel</button>
-            <button class="btn btn-danger delete-course-btn" data-id="${course.id}" data-name="${encodeURIComponent(course.name)}">Dersi Sil</button>
-          </div>
-        `;
-        adminCoursesList.appendChild(item);
-      });
-
-      // Re-bind
-      adminPanel.querySelectorAll('.view-participants-btn').forEach(b => b.addEventListener('click', () => { selectedCourseId = parseInt(b.getAttribute('data-id')); openViewParticipantsModal(); }));
-      adminPanel.querySelectorAll('.export-course-btn').forEach(b => b.addEventListener('click', () => { selectedCourseId = parseInt(b.getAttribute('data-id')); handleExportParticipants(); }));
-      adminPanel.querySelectorAll('.delete-course-btn').forEach(b => b.addEventListener('click', () => {
-        courseToDeleteId = parseInt(b.getAttribute('data-id'));
-        const name = decodeURIComponent(b.getAttribute('data-name'));
-        document.getElementById('deleteCourseMessage').textContent = `"${name}" dersini silmek istediğinizden emin misiniz?`;
-        openModal(deleteCourseModal);
-      }));
+    function deleteCourse(courseId, callback) {
+      const transaction = db.transaction([COURSES_STORE, PARTICIPANTS_STORE], 'readwrite');
+      const courseStore = transaction.objectStore(COURSES_STORE);
+      const participantStore = transaction.objectStore(PARTICIPANTS_STORE);
+      
+      // First delete all participants for this course
+      const participantIndex = participantStore.index('courseId');
+      const participantRequest = participantIndex.openCursor(IDBKeyRange.only(courseId));
+      
+      participantRequest.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          participantStore.delete(cursor.primaryKey);
+          cursor.continue();
+        }
+      };
+      
+      // Then delete the course
+      const courseRequest = courseStore.delete(courseId);
+      
+      courseRequest.onsuccess = () => {
+        courses = courses.filter(c => c.id !== courseId);
+        renderCourses();
+        if (currentUser) renderAdminCourses();
+        if (callback) callback();
+      };
+      
+      courseRequest.onerror = () => notify('Ders silinemedi!', 'error');
     }
 
-    // ------------------ Modal ------------------
-    function openModal(modal){ modal.classList.add('open'); }
-    function closeModal(modal){ modal.classList.remove('open'); }
-
-    function openViewParticipantsModal(){
-      const course = courses.find(c => c.id === selectedCourseId);
-      if(!course) return;
-      document.getElementById('participantsTitle').textContent = `${course.name} - Katılımcılar ${course.classroom ? `(${course.classroom})` : ''}`;
-      const listEl = document.getElementById('participantsList');
-      listEl.innerHTML = '';
-      if(!course.participants || !course.participants.length){
-        listEl.innerHTML = '<div class="empty">Bu derse henüz katılımcı yok.</div>';
-      } else {
-        const table = document.createElement('table');
-        table.style.width = '100%'; table.style.borderCollapse = 'collapse';
-        table.innerHTML = `
-          <thead>
-            <tr style="border-bottom:1px solid rgba(0,0,0,0.1)">
-              <th style="text-align:left; padding:8px 12px">Öğrenci No</th>
-              <th style="text-align:left; padding:8px 12px">Ad</th>
-              <th style="text-align:left; padding:8px 12px">Soyad</th>
-              <th style="text-align:left; padding:8px 12px">Katılma Tarihi</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${course.participants.map(p => `
-              <tr style="border-bottom:1px solid rgba(0,0,0,0.05)">
-                <td style="padding:8px 12px">${escapeHtml(p.studentNumber)}</td>
-                <td style="padding:8px 12px">${escapeHtml(p.name)}</td>
-                <td style="padding:8px 12px">${escapeHtml(p.surname)}</td>
-                <td style="padding:8px 12px">${new Date(p.joinDate).toLocaleString('tr-TR')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        `;
-        listEl.appendChild(table);
-      }
-      openModal(viewParticipantsModal);
+    function clearAllData(callback) {
+      const transaction = db.transaction([COURSES_STORE, PARTICIPANTS_STORE], 'readwrite');
+      const courseStore = transaction.objectStore(COURSES_STORE);
+      const participantStore = transaction.objectStore(PARTICIPANTS_STORE);
+      
+      const courseRequest = courseStore.clear();
+      const participantRequest = participantStore.clear();
+      
+      transaction.oncomplete = () => {
+        courses = [];
+        renderCourses();
+        if (currentUser) renderAdminCourses();
+        if (callback) callback();
+      };
+      
+      transaction.onerror = () => notify('Veriler temizlenemedi!', 'error');
     }
 
-    // ------------------ Handlers ------------------
-    function handleLogin(){
+    function addParticipant(participant, callback) {
+      const transaction = db.transaction([PARTICIPANTS_STORE], 'readwrite');
+      const store = transaction.objectStore(PARTICIPANTS_STORE);
+      const request = store.add(participant);
+      
+      request.onsuccess = () => {
+        if (callback) callback();
+      };
+      
+      request.onerror = () => notify('Katılımcı eklenemedi!', 'error');
+    }
+
+    function getParticipants(courseId, callback) {
+      const transaction = db.transaction([PARTICIPANTS_STORE], 'readonly');
+      const store = transaction.objectStore(PARTICIPANTS_STORE);
+      const index = store.index('courseId');
+      const request = index.getAll(IDBKeyRange.only(courseId));
+      
+      request.onsuccess = (event) => {
+        if (callback) callback(event.target.result);
+      };
+      
+      request.onerror = () => notify('Katılımcılar yüklenemedi!', 'error');
+    }
+
+    // ------------------ Authentication ------------------
+    function handleLogin() {
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value.trim();
-      if(!username || !password){ notify('Lütfen kullanıcı adı ve şifre girin!', 'warning'); return; }
-      if(ADMIN_ACCOUNTS[username] && ADMIN_ACCOUNTS[username].password === password){
-        currentUser = { name: ADMIN_ACCOUNTS[username].name };
-        instructorNameEl.textContent = currentUser.name;
-        adminPanel.style.display = 'block';
-        closeModal(loginModal);
+      
+      if (!username || !password) {
+        notify('Lütfen kullanıcı adı ve şifre girin.', 'error');
+        return;
+      }
+      
+      if (ADMIN_ACCOUNTS[username] && ADMIN_ACCOUNTS[username].password === password) {
+        currentUser = {
+          username: username,
+          name: ADMIN_ACCOUNTS[username].name
+        };
+        
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        updateUIForLoggedInUser();
+        closeModal(elements.loginModal);
         notify(`Hoş geldiniz, ${currentUser.name}!`, 'success');
-        renderCourses();
+        
+        // Clear login form
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        
       } else {
         notify('Kullanıcı adı veya şifre hatalı!', 'error');
       }
     }
 
-    function handleCreateCourse(){
+    // ------------------ Course Management ------------------
+    function handleCreateCourse() {
       const name = document.getElementById('courseName').value.trim();
       const description = document.getElementById('courseDescription').value.trim();
       const classroom = document.getElementById('courseClassroom').value;
-      if(!name){ notify('Ders adı gerekli!', 'warning'); return; }
-      if(!classroom){ notify('Lütfen sınıf seçiniz!', 'warning'); return; }
-      const code = generateCode();
+      
+      if (!name) {
+        notify('Lütfen ders adı girin.', 'error');
+        return;
+      }
+      
+      if (!classroom) {
+        notify('Lütfen sınıf seçin.', 'error');
+        return;
+      }
+      
+      const code = generateConfirmationCode();
       const course = {
-        name, description, classroom, code, instructor: currentUser.name,
+        name: name,
+        description: description,
+        classroom: classroom,
+        code: code,
+        instructor: currentUser.name,
         createdDate: new Date().toISOString()
       };
-      const store = tx([COURSES_STORE], 'readwrite').objectStore(COURSES_STORE);
-      const req = store.add(course);
-      req.onsuccess = () => {
+      
+      addCourse(course, (newCourse) => {
         notify(`"${name}" dersi oluşturuldu! Onay kodu: ${code}`, 'success');
-        closeModal(createCourseModal);
+        closeModal(elements.createCourseModal);
+        
+        // Clear form
         document.getElementById('courseName').value = '';
         document.getElementById('courseDescription').value = '';
         document.getElementById('courseClassroom').value = '';
-        loadCoursesFromDB();
-      };
+        
+        // Save as last created course and show QR
+        lastCreatedCourse = newCourse;
+        localStorage.setItem('lastCreatedCourse', JSON.stringify(newCourse));
+        showQrCode(newCourse);
+      });
     }
 
-    function handleDeleteCourse(){
-      if(!courseToDeleteId) return;
-      const store = tx([COURSES_STORE], 'readwrite').objectStore(COURSES_STORE);
-      const req = store.delete(courseToDeleteId);
-      req.onsuccess = () => {
-        // Delete participants
-        const pStore = tx([PARTICIPANTS_STORE], 'readwrite').objectStore(PARTICIPANTS_STORE);
-        const idx = pStore.index('courseId');
-        const req2 = idx.openCursor(courseToDeleteId);
-        req2.onsuccess = (e) => {
-          const cursor = e.target.result;
-          if(cursor){ cursor.delete(); cursor.continue(); }
-        };
+    function handleDeleteCourse() {
+      if (!courseToDeleteId) return;
+      
+      deleteCourse(courseToDeleteId, () => {
         notify('Ders silindi!', 'success');
-        closeModal(deleteCourseModal);
-        loadCoursesFromDB();
-      };
+        closeModal(elements.deleteCourseModal);
+        courseToDeleteId = null;
+        
+        // Clear last created course if it was deleted
+        if (lastCreatedCourse && lastCreatedCourse.id === courseToDeleteId) {
+          lastCreatedCourse = null;
+          localStorage.removeItem('lastCreatedCourse');
+        }
+      });
     }
 
-    function handleClearAllData(){
-      const store = tx([COURSES_STORE], 'readwrite').objectStore(COURSES_STORE);
-      const req = store.clear();
-      req.onsuccess = () => {
-        const pStore = tx([PARTICIPANTS_STORE], 'readwrite').objectStore(PARTICIPANTS_STORE);
-        const req2 = pStore.clear();
-        req2.onsuccess = () => {
-          notify('Tüm veriler silindi!', 'success');
-          closeModal(clearAllDataModal);
-          loadCoursesFromDB();
-        };
-      };
+    function handleClearAllData() {
+      clearAllData(() => {
+        notify('Tüm veriler temizlendi!', 'success');
+        closeModal(elements.clearAllDataModal);
+        lastCreatedCourse = null;
+        localStorage.removeItem('lastCreatedCourse');
+      });
     }
 
-    function handleJoinCourse(){
+    function handleJoinCourse() {
       const studentNumber = document.getElementById('studentNumber').value.trim();
       const code = document.getElementById('confirmationCode').value.trim();
       const name = document.getElementById('studentName').value.trim();
       const surname = document.getElementById('studentSurname').value.trim();
-      if(!studentNumber || !code || !name || !surname){ notify('Lütfen tüm alanları doldurun!', 'warning'); return; }
+      
+      if (!studentNumber || !code || !name || !surname) {
+        notify('Lütfen tüm alanları doldurun!', 'error');
+        return;
+      }
+      
       const course = courses.find(c => c.code === code);
-      if(!course){ notify('Geçersiz onay kodu!', 'error'); return; }
-      // Check if already joined
-      const store = tx([PARTICIPANTS_STORE]).objectStore(PARTICIPANTS_STORE);
-      const idx = store.index('studentNumber');
-      const req = idx.get(studentNumber);
-      req.onsuccess = (e) => {
-        if(e.target.result){ notify('Bu öğrenci numarası zaten kayıtlı!', 'warning'); return; }
-        // Add participant
-        const pStore = tx([PARTICIPANTS_STORE], 'readwrite').objectStore(PARTICIPANTS_STORE);
-        const participant = { courseId: course.id, studentNumber, name, surname, joinDate: new Date().toISOString() };
-        const req2 = pStore.add(participant);
-        req2.onsuccess = () => {
+      if (!course) {
+        notify('Geçersiz onay kodu!', 'error');
+        return;
+      }
+      
+      // Check if student already joined this course
+      getParticipants(course.id, (participants) => {
+        const alreadyJoined = participants.some(p => p.studentNumber === studentNumber);
+        
+        if (alreadyJoined) {
+          notify('Bu öğrenci numarası zaten bu derse kayıtlı!', 'error');
+          return;
+        }
+        
+        const participant = {
+          courseId: course.id,
+          studentNumber: studentNumber,
+          name: name,
+          surname: surname,
+          joinDate: new Date().toISOString()
+        };
+        
+        addParticipant(participant, () => {
           notify(`"${course.name}" dersine başarıyla katıldınız!`, 'success');
-          closeModal(joinCourseModal);
+          closeModal(elements.joinCourseModal);
+          
+          // Clear form
           document.getElementById('studentNumber').value = '';
           document.getElementById('confirmationCode').value = '';
           document.getElementById('studentName').value = '';
           document.getElementById('studentSurname').value = '';
-          loadCoursesFromDB();
-        };
-      };
+        });
+      });
     }
 
-    function handleExportParticipants(){
+    function handleExportParticipants() {
+      if (!selectedCourseId) return;
+      
       const course = courses.find(c => c.id === selectedCourseId);
-      if(!course) return;
-      if(!course.participants || !course.participants.length){ notify('Katılımcı bulunmuyor!', 'warning'); return; }
-      const data = course.participants.map(p => ({
-        'Öğrenci No': p.studentNumber, 'Ad': p.name, 'Soyad': p.surname,
-        'Katılma Tarihi': new Date(p.joinDate).toLocaleString('tr-TR')
-      }));
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Katılımcılar');
-      XLSX.writeFile(wb, `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_katilimci_listesi.xlsx`);
-      notify('Excel dosyası indiriliyor...', 'success');
+      if (!course) return;
+      
+      getParticipants(selectedCourseId, (participants) => {
+        if (!participants || participants.length === 0) {
+          notify('Bu derste katılımcı bulunmuyor!', 'error');
+          return;
+        }
+        
+        const data = participants.map(p => ({
+          'Öğrenci No': p.studentNumber,
+          'Ad': p.name,
+          'Soyad': p.surname,
+          'Katılma Tarihi': new Date(p.joinDate).toLocaleString('tr-TR')
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Katılımcılar');
+        XLSX.writeFile(wb, `${course.name.replace(/[^a-zA-Z0-9]/g, '_')}_katilimci_listesi.xlsx`);
+        notify('Excel dosyası indiriliyor...', 'success');
+      });
     }
 
-    // ------------------ Utils ------------------
-    function generateCode(){ return Math.random().toString(36).substring(2, 7).toUpperCase(); }
-    function escapeHtml(unsafe){ return unsafe?.replace(/[&<"'>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[m]) || ''; }
-    function notify(message, type='info'){
+    // ------------------ QR Code Functions ------------------
+    function showQrCode(course) {
+      elements.qrCourseName.textContent = course.name;
+      elements.qrCourseCode.textContent = `Onay Kodu: ${course.code}`;
+      elements.qrManualCode.textContent = course.code;
+      
+      // For now using static QR image - in real app you would generate dynamic QR
+      elements.qrCodeImage.src = "qr.png";
+      
+      openModal(elements.qrCodeModal);
+    }
+
+    function showLastCreatedCourseQr() {
+      if (lastCreatedCourse) {
+        showQrCode(lastCreatedCourse);
+      } else {
+        notify('Henüz bir ders oluşturmadınız.', 'error');
+      }
+    }
+
+    // ------------------ Rendering ------------------
+    function renderCourses() {
+      elements.coursesContainer.innerHTML = '';
+      
+      if (courses.length === 0) {
+        elements.noCoursesMessage.style.display = 'block';
+        return;
+      }
+      
+      elements.noCoursesMessage.style.display = 'none';
+      
+      courses.forEach(course => {
+        const courseEl = document.createElement('div');
+        courseEl.className = 'card course-card';
+        const showCode = currentUser && course.instructor === currentUser.name;
+        
+        courseEl.innerHTML = `
+          <div class="course-title">${escapeHtml(course.name)}</div>
+          <div class="muted">${escapeHtml(course.description || '')}</div>
+          <div class="course-meta">
+            <span class="badge">Eğitmen: ${escapeHtml(course.instructor)}</span>
+            ${course.classroom ? `<span class="badge badge-classroom">Sınıf: ${escapeHtml(course.classroom)}</span>` : ''}
+            ${showCode ? `<span class="badge">Onay Kodu: <strong>${course.code}</strong></span>` : ''}
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
+            <button class="btn btn-primary join-course-btn" data-id="${course.id}">Derse Katıl</button>
+            ${showCode ? `
+              <button class="btn view-participants-btn" data-id="${course.id}">Katılımcılar</button>
+              <button class="btn btn-success export-course-btn" data-id="${course.id}">Excel</button>
+              <button class="btn btn-danger delete-course-btn" data-id="${course.id}">Sil</button>
+            ` : ''}
+          </div>
+        `;
+        
+        elements.coursesContainer.appendChild(courseEl);
+      });
+      
+      // Attach event listeners to dynamically created buttons
+      attachCourseButtonListeners();
+    }
+
+    function renderAdminCourses() {
+      const term = (elements.adminSearch.value || '').toLowerCase();
+      const instructorCourses = courses.filter(c => currentUser && c.instructor === currentUser.name);
+      const filteredCourses = instructorCourses.filter(c => 
+        !term || 
+        c.name.toLowerCase().includes(term) || 
+        (c.description || '').toLowerCase().includes(term) ||
+        (c.classroom || '').toLowerCase().includes(term)
+      );
+      
+      elements.adminCoursesList.innerHTML = '';
+      
+      if (filteredCourses.length === 0) {
+        elements.adminCoursesList.innerHTML = '<div class="empty">Bu kriterle eşleşen ders bulunamadı.</div>';
+        return;
+      }
+      
+      filteredCourses.forEach(course => {
+        const courseEl = document.createElement('div');
+        courseEl.className = 'card';
+        
+        courseEl.innerHTML = `
+          <div class="course-title">${escapeHtml(course.name)}</div>
+          <div class="muted">${escapeHtml(course.description || '')}</div>
+          <div class="course-meta" style="margin-top:10px">
+            ${course.classroom ? `<span class="badge badge-classroom">Sınıf: ${escapeHtml(course.classroom)}</span>` : ''}
+            <span class="badge">Onay Kodu: <strong>${course.code}</strong></span>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
+            <button class="btn view-participants-btn" data-id="${course.id}">Katılımcılar</button>
+            <button class="btn show-qr-btn" data-id="${course.id}">QR Kod</button>
+            <button class="btn btn-success export-course-btn" data-id="${course.id}">Excel</button>
+            <button class="btn btn-danger delete-course-btn" data-id="${course.id}">Sil</button>
+          </div>
+        `;
+        
+        elements.adminCoursesList.appendChild(courseEl);
+      });
+      
+      // Attach event listeners to admin course buttons
+      attachAdminCourseButtonListeners();
+    }
+
+    function attachCourseButtonListeners() {
+      // Join course buttons
+      document.querySelectorAll('.join-course-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedCourseId = parseInt(btn.getAttribute('data-id'));
+          openModal(elements.joinCourseModal);
+        });
+      });
+      
+      // View participants buttons
+      document.querySelectorAll('.view-participants-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedCourseId = parseInt(btn.getAttribute('data-id'));
+          openViewParticipantsModal();
+        });
+      });
+      
+      // Export buttons
+      document.querySelectorAll('.export-course-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedCourseId = parseInt(btn.getAttribute('data-id'));
+          handleExportParticipants();
+        });
+      });
+      
+      // Delete buttons
+      document.querySelectorAll('.delete-course-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          courseToDeleteId = parseInt(btn.getAttribute('data-id'));
+          const course = courses.find(c => c.id === courseToDeleteId);
+          if (course) {
+            document.getElementById('deleteCourseMessage').textContent = 
+              `"${course.name}" dersini silmek istediğinizden emin misiniz?`;
+            openModal(elements.deleteCourseModal);
+          }
+        });
+      });
+    }
+
+    function attachAdminCourseButtonListeners() {
+      // These are similar to above but scoped to admin panel
+      elements.adminPanel.querySelectorAll('.view-participants-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedCourseId = parseInt(btn.getAttribute('data-id'));
+          openViewParticipantsModal();
+        });
+      });
+      
+      elements.adminPanel.querySelectorAll('.show-qr-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const courseId = parseInt(btn.getAttribute('data-id'));
+          const course = courses.find(c => c.id === courseId);
+          if (course) showQrCode(course);
+        });
+      });
+      
+      elements.adminPanel.querySelectorAll('.export-course-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedCourseId = parseInt(btn.getAttribute('data-id'));
+          handleExportParticipants();
+        });
+      });
+      
+      elements.adminPanel.querySelectorAll('.delete-course-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          courseToDeleteId = parseInt(btn.getAttribute('data-id'));
+          const course = courses.find(c => c.id === courseToDeleteId);
+          if (course) {
+            document.getElementById('deleteCourseMessage').textContent = 
+              `"${course.name}" dersini silmek istediğinizden emin misiniz?`;
+            openModal(elements.deleteCourseModal);
+          }
+        });
+      });
+    }
+
+    function openViewParticipantsModal() {
+      const course = courses.find(c => c.id === selectedCourseId);
+      if (!course) return;
+      
+      document.getElementById('participantsTitle').textContent = 
+        `${course.name} - Katılımcılar ${course.classroom ? `(${course.classroom})` : ''}`;
+      
+      getParticipants(selectedCourseId, (participants) => {
+        const listEl = document.getElementById('participantsList');
+        listEl.innerHTML = '';
+        
+        if (!participants || participants.length === 0) {
+          listEl.innerHTML = '<div class="empty">Bu derse henüz katılımcı yok.</div>';
+        } else {
+          const table = document.createElement('table');
+          table.style.width = '100%';
+          table.style.borderCollapse = 'collapse';
+          table.innerHTML = `
+            <thead>
+              <tr style="border-bottom:1px solid rgba(0,0,0,0.1)">
+                <th style="text-align:left; padding:8px 12px">Öğrenci No</th>
+                <th style="text-align:left; padding:8px 12px">Ad</th>
+                <th style="text-align:left; padding:8px 12px">Soyad</th>
+                <th style="text-align:left; padding:8px 12px">Katılma Tarihi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${participants.map(p => `
+                <tr style="border-bottom:1px solid rgba(0,0,0,0.05)">
+                  <td style="padding:8px 12px">${escapeHtml(p.studentNumber)}</td>
+                  <td style="padding:8px 12px">${escapeHtml(p.name)}</td>
+                  <td style="padding:8px 12px">${escapeHtml(p.surname)}</td>
+                  <td style="padding:8px 12px">${new Date(p.joinDate).toLocaleString('tr-TR')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          `;
+          listEl.appendChild(table);
+        }
+        
+        openModal(elements.viewParticipantsModal);
+      });
+    }
+
+    // ------------------ Utilities ------------------
+    function openModal(modal) {
+      modal.classList.add('open');
+    }
+
+    function closeModal(modal) {
+      modal.classList.remove('open');
+    }
+
+    function generateConfirmationCode() {
+      return Math.random().toString(36).substring(2, 7).toUpperCase();
+    }
+
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function notify(message, type = 'info') {
       const item = document.createElement('div');
-      item.className = `toast-item ${type}`;
+      item.className = 'toast-item';
       item.textContent = message;
-      toastRoot.appendChild(item);
-      setTimeout(() => { if(item.parentNode) item.parentNode.removeChild(item); }, 4000);
+      
+      if (type === 'error') {
+        item.style.background = 'rgba(239,68,68,.12)';
+        item.style.color = '#b91c1c';
+        item.style.borderColor = 'rgba(239,68,68,.35)';
+      } else if (type === 'success') {
+        item.style.background = 'rgba(34,197,94,.12)';
+        item.style.color = '#15803d';
+        item.style.borderColor = 'rgba(34,197,94,.35)';
+      } else if (type === 'warning') {
+        item.style.background = 'rgba(245,158,11,.12)';
+        item.style.color = '#a16207';
+        item.style.borderColor = 'rgba(245,158,11,.35)';
+      }
+      
+      elements.toast.appendChild(item);
+      
+      setTimeout(() => {
+        if (item.parentNode) {
+          item.parentNode.removeChild(item);
+        }
+      }, 4000);
     }
   </script>
 </body>
